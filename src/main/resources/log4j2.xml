@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="TraceDebug" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] [~] %logger{0} - %msg%n"/>
+			<Filters>
+				<ThresholdFilter level="TRACE" />
+				<ThresholdFilter level="INFO" onMatch="DENY" onMismatch="NEUTRAL" />
+			</Filters>
+        </Console>
+		<Console name="Info" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] [i] %logger{0} - %msg%n"/>
+			<Filters>
+				<ThresholdFilter level="INFO" />
+				<ThresholdFilter level="WARN" onMatch="DENY" onMismatch="NEUTRAL" />
+			</Filters>
+        </Console>
+		<Console name="Warn" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] [?] %logger{0} - %msg%n"/>
+			<Filters>
+				<ThresholdFilter level="WARN" />
+				<ThresholdFilter level="ERROR" onMatch="DENY" onMismatch="NEUTRAL" />
+			</Filters>
+        </Console>
+		<Console name="ErrorFatal" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] [!] %logger{0} - %msg%n"/>
+			<Filters>
+				<ThresholdFilter level="ERROR" />
+			</Filters>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="TRACE">
+            <AppenderRef ref="TraceDebug"/>
+			<AppenderRef ref="Info"/>
+			<AppenderRef ref="Warn"/>
+			<AppenderRef ref="ErrorFatal"/>
+        </Root>
+    </Loggers>
+</Configuration>

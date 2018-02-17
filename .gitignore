@@ -1,0 +1,12 @@
+/?*
+/?*/
+!/gradle/
+!/launcher/
+!/src/
+!/.gitignore
+!/turboshell.ico
+!/?*.gradle
+!/?*.txt
+!/?*.md
+!/?*.cmd
+!/?*.bat

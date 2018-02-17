@@ -1,0 +1,46 @@
+group 'com.cosmicdan.turboshell'
+version '0.0.1'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+	compileOnly 'org.projectlombok:lombok:1.16.18'
+	compile 'org.apache.logging.log4j:log4j-core:2.10.0'
+	compile 'net.java.dev.jna:jna:4.5.1'
+	compile 'net.java.dev.jna:jna-platform:4.5.1'
+}
+
+apply plugin: 'application'
+mainClassName = 'com.cosmicdan.turboshell.Main'
+
+task launcher(type: Copy) {
+	from "${project.projectDir}/launcher/"
+	into "${project.projectDir}/dist/"
+	exclude '**/*.au3'
+	exclude '**/README.txt'
+}
+
+task dist(type: Copy) {
+	dependsOn build
+	dependsOn launcher
+	from configurations.runtime
+	from jar
+	into "${project.projectDir}/dist/lib/"
+}
+
+clean.doFirst {
+    delete "${project.projectDir}/dist"
+}
+
+jar {
+	manifest {
+		attributes 'Main-Class' : 'com.cosmicdan.turboshell.Main'
+	}
+}
