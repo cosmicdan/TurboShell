@@ -7,6 +7,7 @@ import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.BaseTSD;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef;
+import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.win32.W32APIOptions;
 import lombok.extern.log4j.Log4j2;
 
@@ -28,10 +29,30 @@ public class User32Ex {
 	public native WinDef.HWND FindWindow(String lpClassName, String lpWindowName);
 	/** See {@link User32#SetWindowLongPtr} */
 	public native Pointer SetWindowLongPtr(WinDef.HWND hWnd, int nIndex, Pointer dwNewLongPtr);
+	/** See {@link User32#GetWindowLongPtr} */
+	public native BaseTSD.LONG_PTR GetWindowLongPtr(WinDef.HWND hWnd, int nIndex);
 	/** SetWindowLongPtr variant specifically for setting window callbacks. See {@link User32#SetWindowLongPtr} */
 	public native BaseTSD.LONG_PTR SetWindowLongPtr(WinDef.HWND hWnd, int nIndex, Callback wndProc);
 	/** See {@link User32#SetWindowPos} */
 	public native boolean SetWindowPos(WinDef.HWND hWnd, WinDef.HWND hWndInsertAfter, int X, int Y, int cx, int cy, int uFlags);
+
+	// Callback/Window message related stuff
+	/** See {@link User32#GetMessage} */
+	public native int GetMessage(WinUser.MSG lpMsg, WinDef.HWND hWnd, int wMsgFilterMin, int wMsgFilterMax);
+	/** See {@link User32#TranslateMessage} */
+	public native boolean TranslateMessage(WinUser.MSG lpMsg);
+	/** See {@link User32#DispatchMessage} */
+	public native WinDef.LRESULT DispatchMessage(WinUser.MSG lpMsg);
+
+	// For gettong window titles
+	/** See {@link User32#GetWindowTextLength} */
+	public native int GetWindowTextLength(WinDef.HWND hWnd);
+	/** See {@link User32#GetWindowText} */
+	public native int GetWindowText(WinDef.HWND hWnd, char[] lpString, int nMaxCount);
+
+
+
+
 
 	/**
 	 * Passes message information to the specified window procedure.

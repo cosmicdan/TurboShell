@@ -35,4 +35,26 @@ public interface WinUserEx extends WinUser {
 	WinDef.HWND HWND_TOP = new WinDef.HWND(Pointer.createConstant(0));
 	/** Places the window above all non-topmost windows. Maintains topmost position even when deactivated */
 	WinDef.HWND HWND_TOPMOST = new WinDef.HWND(Pointer.createConstant(-1));
+
+
+
+	///////////////////
+	// Object Identifiers. These identify categories of accessible objects within a window.
+	// Full descriptions at https://msdn.microsoft.com/en-us/library/windows/desktop/dd373606(v=vs.85).aspx
+	///////////////////
+	/** The window itself rather than a child object. */
+	long OBJID_WINDOW = 0x00000000;
+
+
+
+	///////////////////
+	// Event constants.
+	// Full descriptions at https://msdn.microsoft.com/en-us/library/windows/desktop/dd318066(v=vs.85).aspx
+	///////////////////
+	/**	The foreground window has changed */
+	int EVENT_SYSTEM_FOREGROUND = 0x0003;
+	/** An object has changed location, shape, or size */
+	int EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
+	/** An object's Name property has changed */
+	int EVENT_OBJECT_NAMECHANGE = 0x800C;
 }
