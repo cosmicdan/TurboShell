@@ -32,9 +32,10 @@ public class TurboBarPresenter implements TurboBarContract.Presenter {
 	public TurboBarPresenter(TurboBarContract.View view) {
 		mView = view;
 		mView.setPresenter(this);
+		TurboBarConfig config = new TurboBarConfig();
 
 		// gather data for building the initial TurboBar view...
-		int turboBarHeight = TurboBarConfig.getInstance().getBarHeight();
+		int turboBarHeight = config.getBarHeight();
 		int[] workAreaStartAndWidth = WindowsEnvironment.getInstance().getWorkAreaStartAndWidth();
 		URL cssResources = getClass().getResource("TurboBar.css");
 		if (null == cssResources)
