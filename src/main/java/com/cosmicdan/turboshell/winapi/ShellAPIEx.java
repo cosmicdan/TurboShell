@@ -1,5 +1,8 @@
 package com.cosmicdan.turboshell.winapi;
 
+/**
+ * Extra constants for this Windows header that didn't yet exist in JNA's platform includes
+ */
 public interface ShellAPIEx {
 	///////////////////
 	// AppBar related

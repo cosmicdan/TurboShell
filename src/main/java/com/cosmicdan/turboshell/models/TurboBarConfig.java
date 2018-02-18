@@ -4,6 +4,7 @@ import lombok.Getter;
 
 /**
  * TurboBar configuration storage
+ * @author Daniel 'CosmicDan' Connolly
  */
 public class TurboBarConfig {
 	/////////////////// "Initialization-on-demand holder" singleton pattern

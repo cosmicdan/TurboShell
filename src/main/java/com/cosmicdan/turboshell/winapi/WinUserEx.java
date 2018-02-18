@@ -4,6 +4,9 @@ import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinUser;
 
+/**
+ * Extra constants for this Windows header that didn't yet exist in JNA's platform includes
+ */
 public interface WinUserEx extends WinUser {
 	///////////////////
 	// Extended Window Styles.

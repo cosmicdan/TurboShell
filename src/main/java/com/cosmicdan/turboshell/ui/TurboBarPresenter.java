@@ -13,6 +13,10 @@ import lombok.extern.log4j.Log4j2;
 
 import java.net.URL;
 
+/**
+ * TurboBar presenter
+ * @author Daniel 'CosmicDan' Connolly
+ */
 @Log4j2
 public class TurboBarPresenter implements TurboBarContract.Presenter {
 	private static final String WINDOW_NAME = "TurboShell's TurboBar";

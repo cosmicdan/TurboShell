@@ -6,6 +6,10 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+/**
+ * TurboBar view
+ * @author Daniel 'CosmicDan' Connolly
+ */
 public class TurboBarView implements TurboBarContract.View {
 	private final Stage mPrimaryStage;
 	private final Parent mView;

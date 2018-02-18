@@ -6,6 +6,10 @@ import javafx.application.Application;
 import javafx.stage.Stage;
 import lombok.extern.log4j.Log4j2;
 
+/**
+ * TurboShell main entrypoint
+ * @author Daniel 'CosmicDan' Connolly
+ */
 @Log4j2
 public class Main {
 	public static void main(String[] args) {

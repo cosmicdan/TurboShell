@@ -11,7 +11,7 @@ import com.sun.jna.win32.W32APIOptions;
 import lombok.extern.log4j.Log4j2;
 
 /**
- * Contains User32 methods as a direct mapping instead of JNA's default interface mapping (for performance reasons).
+ * Contains User32 methods as a direct mapping instead of JNA's default interface mapping for performance
  */
 @SuppressWarnings("UnusedReturnValue")
 @Log4j2
