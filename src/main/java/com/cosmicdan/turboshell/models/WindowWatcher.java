@@ -15,20 +15,8 @@ import lombok.extern.log4j.Log4j2;
  */
 @Log4j2
 public class WindowWatcher extends ModelService {
-	private final Object windowWatcherLock = new Object();
-
-	///////////////////
-	// Observable payload fields
-	///////////////////
-
+	// Callback ID's
 	public static final int PAYLOAD_WINDOW_TITLE = 0;
-	private final ObservablePayload mForegroundWindowTitle = new ObservablePayload(PAYLOAD_WINDOW_TITLE, this);
-
-
-	
-	///////////////////
-	// Thread related things
-	///////////////////
 
 	@Override
 	public ModelServiceThread getThread() {
@@ -130,7 +118,7 @@ public class WindowWatcher extends ModelService {
 				windowTitle = new String(title);
 			// TODO: else set process name to title?
 			//log.info("Title refresh to '" + windowTitle + "'");
-			mForegroundWindowTitle.set(windowTitle);
+			runCallbacks(PAYLOAD_WINDOW_TITLE, windowTitle);
 		}
 	}
 }

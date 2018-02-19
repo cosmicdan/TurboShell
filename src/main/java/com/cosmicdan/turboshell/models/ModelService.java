@@ -1,25 +1,23 @@
 package com.cosmicdan.turboshell.models;
 
-import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A wrapper for "service"-type models. They have a runtime loop and observable data holders.
- * Eases implementation of environment cleanup when closing the thread and thread safe data transfer.
- * Be sure that any getters/setters that are shared by the observable implement some synchronization.
+ * A template for "service"-type models. These have a runtime loop in their own thread and allow other classes (e.g.
+ * a Presenter, if following an MVP pattern) to register callbacks to updates in the ModelService data. It's up to the
+ * ModelService to send the callbacks manually.
  * @author Daniel 'CosmicDan' Connolly
  */
 @Log4j2
 public abstract class ModelService {
-	private final ModelServiceThread thread;
-	private final Object observerLock = new Object();
-	private Set<Observer> mObservers;
+	private final Object callbackLock = new Object();
+	private Set<CallbackInfo> mCallbacks;
 
 	ModelService() {
-		thread = getThread();
+		ModelServiceThread thread = getThread();
 		thread.start();
 	}
 
@@ -30,9 +28,9 @@ public abstract class ModelService {
 	/**
 	 * Provide a new instance of the thread to use for this ModelService.
 	 */
-	public abstract ModelServiceThread getThread();
+	protected abstract ModelServiceThread getThread();
 
-	public abstract class ModelServiceThread extends Thread {
+	abstract class ModelServiceThread extends Thread {
 		@Override
 		public final void run() {
 			Runtime.getRuntime().addShutdownHook(new Thread(this::serviceStop));
@@ -51,92 +49,53 @@ public abstract class ModelService {
 	}
 
 	///////////////////
-	// Observer related things
+	// Callback related things
 	///////////////////
 
-	public interface Observer {
-		void onObservablePayload(ObservablePayload payload);
+	@FunctionalInterface
+	public interface PayloadCallback {
+		void run(Object data);
 	}
 
-	/**
-	 * Generic data holder to ease data transfer between observables and observers
-	 */
-	public class ObservablePayload {
-		private final Object lock = new Object();
-		/** Gets the payload ID that was assigned to it from the observable end, if any. */
-		@Getter private final int mPayloadId;
-		private final ModelService mSource;
-		private Object mData;
+	private static class CallbackInfo {
+		private final int mPayloadId;
+		private final PayloadCallback mCallback;
 
-		/**
-		 * Creates a new object intended to hold data that is send to observers when updated.
-		 * @param payloadId A unique ID for this payload. The observers can use this to identify the data, if desired.
-		 * @param source The source observable (usually an instance of the object creator i.e. 'this').
-		 */
-		public ObservablePayload(int payloadId, ModelService source) {
+		private CallbackInfo(int payloadId, PayloadCallback callback) {
 			mPayloadId = payloadId;
-			mSource = source;
+			mCallback = callback;
 		}
 
-		/**
-		 * Used by observers to check which observable the payload came from
-		 * @return The ModelService subclass that sent this payload
-		 */
-		public Class<? extends ModelService> getSource() {
-			return mSource.getClass();
-		}
-
-		/**
-		 * Set the payload data and push to all registered observers.
-		 * @param obj
-		 */
-		public void set(Object obj) {
-			synchronized (lock) {
-				mData = obj;
-			}
-			mSource.updateObservers(this);
-		}
-
-		/**
-		 * Read the payload data
-		 */
-		public Object get() {
-			synchronized (lock) {
-				return mData;
-			}
+		void run(Object data) {
+			mCallback.run(data);
 		}
 	}
 
-	public void registerObserver(Observer observer) {
-		if (observer == null)
+	public void registerCallback(int payloadId, PayloadCallback callback) {
+		if (null == callback)
 			return;
 
-		synchronized(observerLock) {
-			if (mObservers == null)
-				mObservers = new HashSet<>(1);
-			mObservers.add(observer);
+		synchronized(callbackLock) {
+			if (mCallbacks == null)
+				mCallbacks = new HashSet<>(1);
+			mCallbacks.add(new CallbackInfo(payloadId, callback));
 		}
 	}
 
-	public void unregisterObserver(Observer observer) {
-		if (observer == null)
-			return;
-		synchronized(observerLock) {
-			if (mObservers != null)
-				mObservers.remove(observer);
-		}
-	}
+	void runCallbacks(int payloadId, Object data) {
+		Set<CallbackInfo> callbacksCopy;
 
-	/**
-	 * Send the Observable to any registered Observers.
-	 */
-	private void updateObservers(ObservablePayload payload) {
-		synchronized(observerLock) {
-			if (mObservers != null) {
-				for (Observer observer : mObservers) {
-					observer.onObservablePayload(payload);
-				}
+		synchronized(callbackLock) {
+			if (mCallbacks == null) return;
+			callbacksCopy = new HashSet<>();
+			for (CallbackInfo callback : mCallbacks) {
+				if (callback.mPayloadId == payloadId)
+					callbacksCopy.add(callback);
 			}
+		}
+
+		for (CallbackInfo callback : callbacksCopy) {
+			callback.run(data);
 		}
 	}
 }

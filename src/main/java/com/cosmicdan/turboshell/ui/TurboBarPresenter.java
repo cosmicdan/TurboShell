@@ -1,6 +1,5 @@
 package com.cosmicdan.turboshell.ui;
 
-import com.cosmicdan.turboshell.models.ModelService;
 import com.cosmicdan.turboshell.models.TurboBarConfig;
 import com.cosmicdan.turboshell.models.WindowWatcher;
 import com.cosmicdan.turboshell.models.WindowsEnvironment;
@@ -20,7 +19,7 @@ import java.net.URL;
  * @author Daniel 'CosmicDan' Connolly
  */
 @Log4j2
-public class TurboBarPresenter implements TurboBarContract.Presenter, ModelService.Observer {
+public class TurboBarPresenter implements TurboBarContract.Presenter {
 	private static final String WINDOW_NAME = "TurboShell's TurboBar";
 	private static final int turboBarFlags = WinUserEx.SWP_NOMOVE | WinUserEx.SWP_NOSIZE | WinUserEx.SWP_NOACTIVATE;
 	private static final int WM_USER_APPBAR_CALLBACK = WinUserEx.WM_USER + 808;
@@ -84,7 +83,7 @@ public class TurboBarPresenter implements TurboBarContract.Presenter, ModelServi
 
 		// setup some models and register for observing
 		WindowWatcher windowWatcher = new WindowWatcher();
-		windowWatcher.registerObserver(this);
+		windowWatcher.registerCallback(WindowWatcher.PAYLOAD_WINDOW_TITLE, data -> updateWindowTitle((String)data));
 
 		// finally, add a shutdown hook to cleanup
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -105,15 +104,6 @@ public class TurboBarPresenter implements TurboBarContract.Presenter, ModelServi
 		//if (topmost) // Will put TurboBar above *other* topmost windows too. Probably not necessary...
 		//	User32Ex.INSTANCE.SetWindowPos(turboBarHWnd, WinUserEx.HWND_TOP , 0, 0, 0, 0, turboBarFlags);
 		isTopmost = topmost;
-	}
-
-	@Override
-	public void onObservablePayload(ModelService.ObservablePayload payload) {
-		if (payload.getSource() == WindowWatcher.class) {
-			if (WindowWatcher.PAYLOAD_WINDOW_TITLE == payload.getPayloadId()) {
-				log.info("Got title payload: " + payload.get());
-			}
-		}
 	}
 
 	class TurboBarWinProcCallback implements WinUser.WindowProc {
@@ -138,5 +128,10 @@ public class TurboBarPresenter implements TurboBarContract.Presenter, ModelServi
 			// pass it on...
 			return User32Ex.INSTANCE.CallWindowProc(mTurboBarWinProcBase.toPointer(), turboBarHWnd, uMsg, wParam, lParam);
 		}
+	}
+
+
+	private void updateWindowTitle(String windowTitle) {
+		log.info("Got window title update: " + windowTitle);
 	}
 }
