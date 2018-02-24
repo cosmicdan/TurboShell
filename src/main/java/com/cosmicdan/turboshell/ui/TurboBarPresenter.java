@@ -26,6 +26,7 @@ public class TurboBarPresenter implements TurboBarContract.Presenter {
 
 	private final TurboBarContract.View mView;
 	private final WinDef.HWND turboBarHWnd;
+	private final TurboBarWinProcCallback turboBarWinProcCallback; // avoid GC
 
 	// cached values to save unnecessary WinAPI calls
 	private boolean isTopmost = false;
@@ -75,7 +76,7 @@ public class TurboBarPresenter implements TurboBarContract.Presenter {
 		}
 		// ...and it's callback
 		BaseTSD.LONG_PTR turboBarWinProcBase = User32.INSTANCE.GetWindowLongPtr(turboBarHWnd, User32.GWL_WNDPROC);
-		WinUser.WindowProc turboBarWinProcCallback = new TurboBarWinProcCallback(turboBarWinProcBase);
+		turboBarWinProcCallback = new TurboBarWinProcCallback(turboBarWinProcBase);
 		BaseTSD.LONG_PTR appBarCallbackResult = User32Ex.INSTANCE.SetWindowLongPtr(turboBarHWnd, User32.GWL_WNDPROC, turboBarWinProcCallback);
 		if (0 == appBarCallbackResult.longValue()) {
 			throw new WinApiError("Error setting TurboBar appbar callback!");
