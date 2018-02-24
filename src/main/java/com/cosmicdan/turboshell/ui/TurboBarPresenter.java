@@ -3,6 +3,7 @@ package com.cosmicdan.turboshell.ui;
 import com.cosmicdan.turboshell.models.TurboBarConfig;
 import com.cosmicdan.turboshell.models.WindowWatcher;
 import com.cosmicdan.turboshell.models.WindowsEnvironment;
+import com.cosmicdan.turboshell.ui.TurboBarContract.SysBtnAction;
 import com.cosmicdan.turboshell.winapi.ShellAPIEx;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinApiError;
@@ -95,11 +96,6 @@ public class TurboBarPresenter implements TurboBarContract.Presenter {
 		}));
 	}
 
-	@Override
-	public String getWindowTitle() {
-		return WINDOW_NAME;
-	}
-
 	private void setTopmost(final boolean topmost) {
 		if (topmost == isTopmost)
 			return;
@@ -133,6 +129,21 @@ public class TurboBarPresenter implements TurboBarContract.Presenter {
 		}
 	}
 
+	@Override
+	public String getWindowName() {
+		return WINDOW_NAME;
+	}
+
+	@Override
+	public void doSysbtnAction(SysBtnAction minimize) {
+		switch (minimize) {
+			case MINIMIZE:
+				log.info("Minimize fired!");
+				break;
+			default:
+				log.error(new RuntimeException("Got an unknown SysBtnAction"));
+		}
+	}
 
 	private void updateWindowTitle(String windowTitle) {
 		log.info("Got window title update: " + windowTitle);
