@@ -1,5 +1,7 @@
 package com.cosmicdan.turboshell.models;
 
+import com.cosmicdan.turboshell.models.data.SizedStack;
+import com.cosmicdan.turboshell.models.data.WindowInfo;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinUserEx;
 import com.sun.jna.platform.win32.User32;
@@ -17,6 +19,8 @@ import lombok.extern.log4j.Log4j2;
 public class WindowWatcher extends ModelService {
 	// Callback ID's
 	public static final int PAYLOAD_WINDOW_TITLE = 0;
+
+	private final SizedStack foregroundWindows = new SizedStack<WindowInfo>(10);
 
 	@Override
 	public ModelServiceThread getThread() {
@@ -90,35 +94,72 @@ public class WindowWatcher extends ModelService {
 							 WinDef.DWORD dwEventThread,
 							 WinDef.DWORD dwmsEventTime) {
 			if (WinUserEx.OBJID_WINDOW == idObject.longValue()) {
-				switch ((int) event.longValue()) {
-					case WinUserEx.EVENT_SYSTEM_FOREGROUND:
-						//log.info("Foreground window changed");
-						break;
-					case WinUserEx.EVENT_OBJECT_LOCATIONCHANGE:
-						//log.info("Foreground window location changed");
-						break;
-					case WinUserEx.EVENT_OBJECT_NAMECHANGE:
-						//log.info("Foreground window name changed");
-						updateWindowTitle(hWnd);
-						break;
-					default:
-						log.warn("WinEventProc callback somehow got an unknown event: " + Long.toHexString(event.longValue()));
-						break;
+				WindowInfo windowInfo = new WindowInfo(hWnd);
+				if (windowInfo.getStyleInfo().isReal()) {
+					WindowEvent windowEvent = WindowEvent.getEvent((int) event.longValue());
+					windowEvent.run(WindowWatcher.this, windowInfo);
 				}
 			}
 		}
-
-		private void updateWindowTitle(WinDef.HWND hWnd) {
-			// get the title for the new window
-			final int titleLength = User32Ex.INSTANCE.GetWindowTextLength(hWnd) + 1;
-			final char[] title = new char[titleLength];
-			final int length = User32Ex.INSTANCE.GetWindowText(hWnd, title, title.length);
-			String windowTitle = "[No title/process]";
-			if (length > 0)
-				windowTitle = new String(title);
-			// TODO: else set process name to title?
-			//log.info("Title refresh to '" + windowTitle + "'");
-			runCallbacks(PAYLOAD_WINDOW_TITLE, windowTitle);
-		}
 	}
+
+
+	///////////////////
+	// Window event constants.
+	// Full descriptions at https://msdn.microsoft.com/en-us/library/windows/desktop/dd318066(v=vs.85).aspx
+	///////////////////
+	enum WindowEvent {
+		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND) {
+			@Override
+			public void run(final WindowWatcher windowWatcher, WindowInfo windowInfo) {
+				//log.info("Foreground window changed");
+				windowWatcher.foregroundWindows.push(windowInfo);
+				windowWatcher.updateWindowTitle(windowInfo.getHWnd());
+			}
+		},
+		EVENT_OBJECT_LOCATIONCHANGE(WinUserEx.EVENT_OBJECT_LOCATIONCHANGE) {
+			@Override
+			public void run(final WindowWatcher windowWatcher, WindowInfo windowInfo) {
+				//log.info("A window location changed");
+			}
+		},
+		EVENT_OBJECT_NAMECHANGE(WinUserEx.EVENT_OBJECT_NAMECHANGE) {
+			@Override
+			public void run(final WindowWatcher windowWatcher, WindowInfo windowInfo) {
+				//log.info("A window title changed");
+				windowWatcher.updateWindowTitle(windowInfo.getHWnd());
+			}
+		};
+
+		private final int mEventConstant;
+
+		WindowEvent(int eventConstant) {
+			mEventConstant = eventConstant;
+		}
+
+		public static WindowEvent getEvent(int eventConstant) {
+			for (WindowEvent windowEvent : values()) {
+				if (eventConstant == windowEvent.mEventConstant) {
+					return windowEvent;
+				}
+			}
+			throw new RuntimeException("Unrecognized WindowEvent constant: " + eventConstant);
+		}
+
+		public abstract void run(WindowWatcher windowWatcher, WindowInfo windowInfo);
+	}
+
+	private void updateWindowTitle(WinDef.HWND hWnd) {
+		// get the title for the new window
+		final int titleLength = User32Ex.INSTANCE.GetWindowTextLength(hWnd) + 1;
+		final char[] title = new char[titleLength];
+		final int length = User32Ex.INSTANCE.GetWindowText(hWnd, title, title.length);
+		String windowTitle = "[No title/process]";
+		if (length > 0)
+			windowTitle = new String(title);
+		// TODO: else set process name to title?
+		//log.info("Title refresh to '" + windowTitle + "'");
+		runCallbacks(PAYLOAD_WINDOW_TITLE, windowTitle);
+	}
+
 }

@@ -25,6 +25,7 @@ public class User32Ex {
 		Native.register(user32);
 	}
 
+	// generic window stuff
 	/** See {@link User32#FindWindow} */
 	public native WinDef.HWND FindWindow(String lpClassName, String lpWindowName);
 	/** See {@link User32#SetWindowLongPtr} */
@@ -35,6 +36,10 @@ public class User32Ex {
 	public native BaseTSD.LONG_PTR SetWindowLongPtr(WinDef.HWND hWnd, int nIndex, Callback wndProc);
 	/** See {@link User32#SetWindowPos} */
 	public native boolean SetWindowPos(WinDef.HWND hWnd, WinDef.HWND hWndInsertAfter, int X, int Y, int cx, int cy, int uFlags);
+	/** See {@link User32#IsWindowVisible} */
+	public native boolean IsWindowVisible(WinDef.HWND hWnd);
+	/** See {@link User32#GetAncestor} */
+	public native WinDef.HWND GetAncestor(WinDef.HWND hwnd, int gaFlags);
 
 	// Callback/Window message related stuff
 	/** See {@link User32#GetMessage} */

@@ -14,11 +14,13 @@ public interface WinUserEx extends WinUser {
 	///////////////////
 
 	/** Window does not become the foreground window when the user clicks it or minimizes/closes another window */
-	int WS_EX_NOACTIVATE = 0x08000000;
+	long WS_EX_NOACTIVATE = 0x08000000;
 	/** The window is intended to be used as a floating toolbar */
-	int WS_EX_TOOLWINDOW = 0x00000080;
+	long WS_EX_TOOLWINDOW = 0x00000080;
 	/** The window should be placed above all non-topmost windows and should stay above them */
-	int WS_EX_TOPMOST = 0x00000008;
+	long WS_EX_TOPMOST = 0x00000008;
+	/** Forces a top-level window onto the taskbar when the window is visible. */
+	long WS_EX_APPWINDOW = 0x00040000;
 
 
 
@@ -48,7 +50,7 @@ public interface WinUserEx extends WinUser {
 
 
 	///////////////////
-	// Event constants.
+	// Window event constants.
 	// Full descriptions at https://msdn.microsoft.com/en-us/library/windows/desktop/dd318066(v=vs.85).aspx
 	///////////////////
 	/**	The foreground window has changed */
