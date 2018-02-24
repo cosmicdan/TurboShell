@@ -52,7 +52,9 @@ public class TurboBarPresenter implements TurboBarContract.Presenter {
 		turboBarHWnd.setPointer(new Pointer(Window.getWindows().get(0).getNativeWindow()));
 
 		// apply desired window styles to the TurboBar (toolwindow = no taskbar entry)
-		User32Ex.INSTANCE.SetWindowLongPtr(turboBarHWnd, WinUserEx.GWL_EXSTYLE, Pointer.createConstant(WinUserEx.WS_EX_TOOLWINDOW));
+		User32Ex.INSTANCE.SetWindowLongPtr(turboBarHWnd, WinUserEx.GWL_EXSTYLE,
+				Pointer.createConstant(WinUserEx.WS_EX_NOACTIVATE | WinUserEx.WS_EX_TOOLWINDOW | WinUserEx.WS_EX_TOPMOST)
+		);
 
 		// set topmost initially, along with other important window flags
 		setTopmost(true);
