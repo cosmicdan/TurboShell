@@ -2,6 +2,7 @@ package com.cosmicdan.turboshell.gui;
 
 import com.cosmicdan.turboshell.gui.base.MvpPresenter;
 import com.cosmicdan.turboshell.gui.base.MvpView;
+import javafx.event.Event;
 
 /**
  * Contract between TurboBar view and presenter
@@ -14,14 +15,14 @@ public interface TurboBarContract {
 	}
 
 	interface Presenter extends MvpPresenter {
-		void doViewAction(ViewAction action);
+		void doViewAction(ViewAction action, Event event);
 
 		/**
 		 * All enums used in doViewAction must implement ViewAction.
 		 */
 		@FunctionalInterface
 		interface ViewAction {
-			void invoke();
+			void invoke(Event event);
 		}
 	}
 }

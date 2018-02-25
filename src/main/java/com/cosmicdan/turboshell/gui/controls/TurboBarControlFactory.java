@@ -1,8 +1,15 @@
 package com.cosmicdan.turboshell.gui.controls;
 
+import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
+import javafx.scene.input.InputEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+
+import java.util.EventListener;
 
 /**
  * @author Daniel 'CosmicDan' Connolly
@@ -28,21 +35,27 @@ public class TurboBarControlFactory {
 	/**
 	 * Build a new transparent Button with only a single graphic
 	 */
-	public final AdaptiveButton newGenericButton(final String imageResourcePath, final Runnable clickAction) {
-		return newGenericButton("", new String[] {imageResourcePath}, clickAction);
+	public final <T extends Event> AdaptiveButton newGenericButton(final String imageResourcePath,
+																   final EventType<T> eventType,
+																   final EventHandler<? super T> eventHandler) {
+		return newGenericButton("", new String[] {imageResourcePath}, eventType, eventHandler);
 	}
 
-	private AdaptiveButton newGenericButton(final String text, final String[] imageResourcePaths,
-											final Runnable clickAction) {
+	private <T extends Event> AdaptiveButton newGenericButton(final String text,
+															  final String[] imageResourcePaths,
+															  final EventType<T> eventType,
+															  final EventHandler<? super T> eventHandler) {
 		final AdaptiveButton button = new AdaptiveButton(mSourceClass, text, imageResourcePaths);
 		button.setPrefHeight(mTurboBarHeight - 1);
+
+		button.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent event) {
+
+			}
+		});
+
+		button.addEventHandler(eventType, eventHandler);
 		return button;
 	}
-
-	/*
-	@FunctionalInterface
-	public interface OnAction {
-		void run(Object data);
-	}
-	*/
 }

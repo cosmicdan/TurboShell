@@ -24,6 +24,7 @@ import com.sun.jna.platform.win32.WinDef.UINT_PTR;
 import com.sun.jna.platform.win32.WinDef.WPARAM;
 import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.WinUser.WindowProc;
+import javafx.event.Event;
 import lombok.extern.log4j.Log4j2;
 
 import java.net.URL;
@@ -214,26 +215,26 @@ public class TurboBarPresenter implements Presenter {
 	 * Main entrypoint for view actions.
 	 */
 	@Override
-	public final void doViewAction(final ViewAction action) {
-		action.invoke();
+	public final void doViewAction(final ViewAction action, final Event event) {
+		action.invoke(event);
 	}
 
 	enum SysBtnAction implements ViewAction {
 		MINIMIZE {
 			@Override
-			public void invoke() {
+			public void invoke(Event event) {
 				log.info("Minimize fired!");
 			}
 		},
 		RESIZE {
 			@Override
-			public void invoke() {
+			public void invoke(Event event) {
 
 			}
 		},
 		CLOSE {
 			@Override
-			public void invoke() {
+			public void invoke(Event event) {
 
 			}
 		}

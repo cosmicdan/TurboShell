@@ -5,6 +5,7 @@ import com.cosmicdan.turboshell.gui.TurboBarContract.View;
 import com.cosmicdan.turboshell.gui.TurboBarPresenter.SysBtnAction;
 import com.cosmicdan.turboshell.gui.controls.TurboBarControlFactory;
 import javafx.scene.Scene;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.stage.Stage;
@@ -61,8 +62,9 @@ public class TurboBarView implements View {
 		// SysButton - Minimize
 		coreControls.add(factory.newGenericButton(
 				"TurboBar_sysbtn_minimize.png",
-				() -> mPresenter.doViewAction(SysBtnAction.MINIMIZE)
-		));
+				MouseEvent.MOUSE_CLICKED,
+				(MouseEvent event) -> mPresenter.doViewAction(SysBtnAction.MINIMIZE, event))
+		);
 
 		// All done, now actually add them to the stage
 		pane.getChildren().addAll(coreControls);

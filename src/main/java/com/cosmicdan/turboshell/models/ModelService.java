@@ -43,28 +43,6 @@ public abstract class ModelService implements Runnable {
 	 */
 	protected abstract void serviceStop();
 
-	/*
-	abstract static class ModelServiceThread extends Thread {
-		protected ModelServiceThread() {
-		}
-
-		@Override
-		public final void run() {
-			Runtime.getRuntime().addShutdownHook(new Thread(this::serviceStop));
-			serviceStart();
-		}
-
-		/**
-		 * Called when a start is requested. Do your typical Thread#run() stuff here.
-		 */
-		//public abstract void serviceStart();
-
-		/**
-		 * Called when a shutdown is request. Do environment cleanup here.
-		 */
-		//public abstract void serviceStop();
-	//}
-
 
 	///////////////////
 	// Callback related things
