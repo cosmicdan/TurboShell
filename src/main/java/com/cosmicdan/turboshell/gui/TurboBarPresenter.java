@@ -16,6 +16,7 @@ import com.sun.jna.platform.win32.Shell32;
 import com.sun.jna.platform.win32.ShellAPI;
 import com.sun.jna.platform.win32.ShellAPI.APPBARDATA;
 import com.sun.jna.platform.win32.ShellAPI.APPBARDATA.ByReference;
+import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinDef.DWORD;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.LPARAM;
@@ -146,14 +147,14 @@ public class TurboBarPresenter implements Presenter {
 			if (WM_USER_APPBAR_CALLBACK == uMsg) {
 				//log.info(hWnd + "; " + uMsg + "; " + wParam.intValue() + "; " + lParam.intValue());
 				log.info("Invoke appbar callback...");
-				AppbarCallbackResponse.invoke(wParam, lParam);
+				AppbarCallback.invoke(wParam, lParam);
 			}
 			// pass it on...
 			return User32Ex.INSTANCE.CallWindowProc(mTurboBarWinProcBase.toPointer(), turboBarHWnd, uMsg, wParam, lParam);
 		}
 	}
 
-	private enum AppbarCallbackResponse {
+	private enum AppbarCallback {
 		ABN_FULLSCREENAPP(ShellAPIEx.ABN_FULLSCREENAPP) {
 			@Override
 			public void invoke(final LPARAM lParam) {
@@ -165,21 +166,21 @@ public class TurboBarPresenter implements Presenter {
 
 		private final int mAppbarCallbackConst;
 
-		AppbarCallbackResponse(final int appbarCallbackConst) {
+		AppbarCallback(final int appbarCallbackConst) {
 			mAppbarCallbackConst = appbarCallbackConst;
 		}
 
 		@SuppressWarnings("StaticMethodOnlyUsedInOneClass")
 		static void invoke(final WPARAM wParam, final LPARAM lParam) {
-			for (final AppbarCallbackResponse response : values()) {
-				if (wParam.intValue() == response.mAppbarCallbackConst) {
-					response.invoke(lParam);
+			for (final AppbarCallback callback : values()) {
+				if (wParam.intValue() == callback.mAppbarCallbackConst) {
+					callback.invoke(lParam);
 				}
 			}
 			// some other event happened, ignore it
 		}
 
-		protected abstract void invoke(LPARAM lParam);
+		abstract void invoke(WinDef.LPARAM lParam);
 	}
 
 	//////////////////////////////////////////////////////////////
@@ -214,29 +215,35 @@ public class TurboBarPresenter implements Presenter {
 	/**
 	 * Main entrypoint for view actions.
 	 */
+	/*
 	@Override
 	public final void doViewAction(final ViewAction action, final Event event) {
 		action.invoke(event);
 	}
+	*/
 
 	enum SysBtnAction implements ViewAction {
-		MINIMIZE {
-			@Override
-			public void invoke(Event event) {
-				log.info("Minimize fired!");
-			}
-		},
-		RESIZE {
-			@Override
-			public void invoke(Event event) {
+		MINIMIZE((Presenter presenter, Event event) -> {
+			log.info("Got minimize action!");
+		}),
+		RESIZE((Presenter presenter, Event event) -> {
 
-			}
-		},
-		CLOSE {
-			@Override
-			public void invoke(Event event) {
+		}),
+		CLOSE((Presenter presenter, Event event) -> {
 
-			}
+		});
+
+		private ViewAction mViewAction;
+
+		SysBtnAction(final ViewAction viewAction) {
+			mViewAction = viewAction;
 		}
+
+		@Override
+		public void invoke(Presenter presenter, Event event) {
+			mViewAction.invoke(presenter, event);
+		}
+
+
 	}
 }

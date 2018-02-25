@@ -15,14 +15,9 @@ public interface TurboBarContract {
 	}
 
 	interface Presenter extends MvpPresenter {
-		void doViewAction(ViewAction action, Event event);
-
-		/**
-		 * All enums used in doViewAction must implement ViewAction.
-		 */
 		@FunctionalInterface
 		interface ViewAction {
-			void invoke(Event event);
+			void invoke(Presenter presenter, Event event);
 		}
 	}
 }

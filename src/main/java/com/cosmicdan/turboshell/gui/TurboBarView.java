@@ -63,7 +63,7 @@ public class TurboBarView implements View {
 		coreControls.add(factory.newGenericButton(
 				"TurboBar_sysbtn_minimize.png",
 				MouseEvent.MOUSE_CLICKED,
-				(MouseEvent event) -> mPresenter.doViewAction(SysBtnAction.MINIMIZE, event))
+				(MouseEvent event) -> SysBtnAction.MINIMIZE.invoke(mPresenter, event))
 		);
 
 		// All done, now actually add them to the stage
