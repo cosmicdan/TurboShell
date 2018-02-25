@@ -20,7 +20,7 @@ public class WindowWatcher extends ModelService {
 	// Callback ID's
 	public static final int PAYLOAD_WINDOW_TITLE = 0;
 
-	private final SizedStack foregroundWindows = new SizedStack<WindowInfo>(10);
+	private final SizedStack<WindowInfo> foregroundWindows = new SizedStack<>(10);
 
 	@Override
 	public ModelServiceThread getThread() {
@@ -96,8 +96,8 @@ public class WindowWatcher extends ModelService {
 			if (WinUserEx.OBJID_WINDOW == idObject.longValue()) {
 				WindowInfo windowInfo = new WindowInfo(hWnd);
 				if (windowInfo.getStyleInfo().isReal()) {
-					WindowEvent windowEvent = WindowEvent.getEvent((int) event.longValue());
-					windowEvent.run(WindowWatcher.this, windowInfo);
+					WindowEventResponse windowEvent = WindowEventResponse.getEvent((int) event.longValue());
+					windowEvent.invoke(WindowWatcher.this, windowInfo);
 				}
 			}
 		}
@@ -108,37 +108,56 @@ public class WindowWatcher extends ModelService {
 	// Window event constants.
 	// Full descriptions at https://msdn.microsoft.com/en-us/library/windows/desktop/dd318066(v=vs.85).aspx
 	///////////////////
-	enum WindowEvent {
+	@SuppressWarnings("PublicMethodWithoutLogging")
+	enum WindowEventResponse {
 		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND) {
 			@Override
-			public void run(final WindowWatcher windowWatcher, WindowInfo windowInfo) {
+			public void invoke(final WindowWatcher windowWatcher, final WindowInfo newWindowInfo) {
 				//log.info("Foreground window changed");
-				windowWatcher.foregroundWindows.push(windowInfo);
-				windowWatcher.updateWindowTitle(windowInfo.getHWnd());
+				// If the new hWnd exists anywhere in the stack, remove it
+				for (int i = 0; i < windowWatcher.foregroundWindows.size(); i++) {
+					if (windowWatcher.foregroundWindows.get(i).getHWnd().equals(newWindowInfo.getHWnd())) {
+						windowWatcher.foregroundWindows.remove(i);
+						break;
+					}
+				}
+				// add the fresh hwnd to top of the stack
+				windowWatcher.foregroundWindows.push(newWindowInfo);
+				// callback for window title update
+				windowWatcher.runCallbacks(PAYLOAD_WINDOW_TITLE, newWindowInfo.getTitle());
 			}
 		},
 		EVENT_OBJECT_LOCATIONCHANGE(WinUserEx.EVENT_OBJECT_LOCATIONCHANGE) {
 			@Override
-			public void run(final WindowWatcher windowWatcher, WindowInfo windowInfo) {
+			public void invoke(final WindowWatcher windowWatcher, final WindowInfo newWindowInfo) {
 				//log.info("A window location changed");
 			}
 		},
 		EVENT_OBJECT_NAMECHANGE(WinUserEx.EVENT_OBJECT_NAMECHANGE) {
 			@Override
-			public void run(final WindowWatcher windowWatcher, WindowInfo windowInfo) {
-				//log.info("A window title changed");
-				windowWatcher.updateWindowTitle(windowInfo.getHWnd());
+			public void invoke(final WindowWatcher windowWatcher, final WindowInfo newWindowInfo) {
+				// check if hWnd is the same as top of the stack (i.e. foreground), if not then ignore it
+				if (windowWatcher.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
+					// get new title
+					WindowInfo foregroundWindowInfo = windowWatcher.foregroundWindows.peek();
+					String newTitle = foregroundWindowInfo.getTitle(true);
+					// update window title only if required
+					if (!newTitle.equals(foregroundWindowInfo.getTitle())) {
+						foregroundWindowInfo.setTitle(newTitle);
+						windowWatcher.runCallbacks(PAYLOAD_WINDOW_TITLE, newTitle);
+					}
+				}
 			}
 		};
 
 		private final int mEventConstant;
 
-		WindowEvent(int eventConstant) {
+		WindowEventResponse(final int eventConstant) {
 			mEventConstant = eventConstant;
 		}
 
-		public static WindowEvent getEvent(int eventConstant) {
-			for (WindowEvent windowEvent : values()) {
+		public static WindowEventResponse getEvent(final int eventConstant) {
+			for (final WindowEventResponse windowEvent : values()) {
 				if (eventConstant == windowEvent.mEventConstant) {
 					return windowEvent;
 				}
@@ -146,20 +165,6 @@ public class WindowWatcher extends ModelService {
 			throw new RuntimeException("Unrecognized WindowEvent constant: " + eventConstant);
 		}
 
-		public abstract void run(WindowWatcher windowWatcher, WindowInfo windowInfo);
+		public abstract void invoke(WindowWatcher windowWatcher, WindowInfo newWindowInfo);
 	}
-
-	private void updateWindowTitle(WinDef.HWND hWnd) {
-		// get the title for the new window
-		final int titleLength = User32Ex.INSTANCE.GetWindowTextLength(hWnd) + 1;
-		final char[] title = new char[titleLength];
-		final int length = User32Ex.INSTANCE.GetWindowText(hWnd, title, title.length);
-		String windowTitle = "[No title/process]";
-		if (length > 0)
-			windowTitle = new String(title);
-		// TODO: else set process name to title?
-		//log.info("Title refresh to '" + windowTitle + "'");
-		runCallbacks(PAYLOAD_WINDOW_TITLE, windowTitle);
-	}
-
 }

@@ -40,6 +40,8 @@ public class User32Ex {
 	public native boolean IsWindowVisible(WinDef.HWND hWnd);
 	/** See {@link User32#GetAncestor} */
 	public native WinDef.HWND GetAncestor(WinDef.HWND hwnd, int gaFlags);
+	/** See {@link User32#GetWindow} */
+	public native WinDef.HWND GetWindow(WinDef.HWND hWnd, int uCmd);
 
 	// Callback/Window message related stuff
 	/** See {@link User32#GetMessage} */
