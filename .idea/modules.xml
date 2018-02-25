@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/TurboShell.iml" filepath="$PROJECT_DIR$/TurboShell.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/TurboShell_main.iml" filepath="$PROJECT_DIR$/.idea/modules/TurboShell_main.iml" group="TurboShell" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/TurboShell_test.iml" filepath="$PROJECT_DIR$/.idea/modules/TurboShell_test.iml" group="TurboShell" />
+    </modules>
+  </component>
+</project>

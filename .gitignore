@@ -5,8 +5,14 @@
 !/src/
 !/.gitignore
 !/turboshell.ico
-!/?*.gradle
-!/?*.txt
-!/?*.md
-!/?*.cmd
-!/?*.bat
+!**/?*.gradle
+!**/?*.txt
+!**/?*.md
+!**/?*.cmd
+!**/?*.bat
+!**/?*.iml
+
+# as per IntelliJ docs
+!.idea/
+**/.idea/workspace.xml
+**/.idea/tasks.xml

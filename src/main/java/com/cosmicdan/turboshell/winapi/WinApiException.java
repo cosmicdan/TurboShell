@@ -10,7 +10,7 @@ import lombok.extern.log4j.Log4j2;
 @SuppressWarnings("UncheckedExceptionClass")
 @Log4j2
 public class WinApiError extends RuntimeException {
-	public WinApiError(String msg) {
+	public WinApiError(final String msg) {
 		super(msg, new LastErrorException(Native.getLastError()));
 	}
 }
