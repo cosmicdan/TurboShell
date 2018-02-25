@@ -1,6 +1,6 @@
-package com.cosmicdan.turboshell.ui.base;
+package com.cosmicdan.turboshell.gui.base;
 
+@FunctionalInterface
 public interface MvpView<T extends MvpPresenter> {
-	// common View signatures
 	void setPresenter(T presenter);
 }

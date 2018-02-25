@@ -2,17 +2,21 @@ package com.cosmicdan.turboshell.models;
 
 import com.cosmicdan.turboshell.models.data.SizedStack;
 import com.cosmicdan.turboshell.models.data.WindowInfo;
+import com.cosmicdan.turboshell.models.data.WindowInfo.Cache;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinUserEx;
 import com.sun.jna.platform.win32.User32;
-import com.sun.jna.platform.win32.WinDef;
-import com.sun.jna.platform.win32.WinNT;
-import com.sun.jna.platform.win32.WinUser;
+import com.sun.jna.platform.win32.WinDef.DWORD;
+import com.sun.jna.platform.win32.WinDef.HWND;
+import com.sun.jna.platform.win32.WinDef.LONG;
+import com.sun.jna.platform.win32.WinNT.HANDLE;
+import com.sun.jna.platform.win32.WinUser.MSG;
+import com.sun.jna.platform.win32.WinUser.WinEventProc;
 import lombok.extern.log4j.Log4j2;
 
 /**
- * Active model (observable service) that hooks window-related events on the system - mostly the foreground window properties.
- * A loop that waits for callback messages runs in it's own thread.
+ * Active model (observable service) that hooks window-related events on the system - mostly the foreground window
+ * properties. A loop that waits for callback messages runs in it's own thread.
  * @author Daniel 'CosmicDan' Connolly
  */
 @Log4j2
@@ -22,94 +26,95 @@ public class WindowWatcher extends ModelService {
 
 	private final SizedStack<WindowInfo> foregroundWindows = new SizedStack<>(10);
 
-	@Override
-	public ModelServiceThread getThread() {
-		return new WindowWatcherThread();
+	public WindowWatcher() {
 	}
 
-	private class WindowWatcherThread extends ModelServiceThread {
-		private WinNT.HANDLE hookLocationOrNameChange;
-		private WinNT.HANDLE hookForegroundChange;
+	// all callbacks as class fields to avoid GC
+	private HANDLE hookLocationChange = null;
+	private HANDLE hookNameChange = null;
+	private HANDLE hookForegroundChange = null;
 
-		@Override
-		public void serviceStart() {
-			log.info("Starting...");
-			WinUser.WinEventProc callback = new WinEventProcCallback();
+	@Override
+	protected final void serviceStart() {
+		log.info("Starting...");
+		final WinEventProc callback = new WinEventProcCallback();
 
-			// hook window location and name changes
-			hookLocationOrNameChange = SetWinEventHook(
-					WinUserEx.EVENT_OBJECT_LOCATIONCHANGE,
-					WinUserEx.EVENT_OBJECT_NAMECHANGE,
-					callback
-			);
+		// hook window location changes
+		hookLocationChange = SetWinEventHook(
+				WinUserEx.EVENT_OBJECT_LOCATIONCHANGE,
+				WinUserEx.EVENT_OBJECT_LOCATIONCHANGE,
+				callback
+		);
 
-			// hook foreground window changes
-			hookForegroundChange = SetWinEventHook(
-					WinUserEx.EVENT_SYSTEM_FOREGROUND,
-					WinUserEx.EVENT_SYSTEM_FOREGROUND,
-					callback
-			);
+		hookNameChange = SetWinEventHook(
+				WinUserEx.EVENT_OBJECT_NAMECHANGE,
+				WinUserEx.EVENT_OBJECT_NAMECHANGE,
+				callback
+		);
 
-			WinUser.MSG msg = new WinUser.MSG();
-			int result = -1;
-			while (0 != result) {
-				result = User32Ex.INSTANCE.GetMessage(msg, null, 0, 0);
-				if (result == -1) {
-					log.error("Error in GetMessage! Aborting!");
-					break;
-				} else {
-					User32Ex.INSTANCE.TranslateMessage(msg);
-					User32Ex.INSTANCE.DispatchMessage(msg);
-				}
+		// hook foreground window changes
+		hookForegroundChange = SetWinEventHook(
+				WinUserEx.EVENT_SYSTEM_FOREGROUND,
+				WinUserEx.EVENT_SYSTEM_FOREGROUND,
+				callback
+		);
+
+		final MSG msg = new MSG();
+		int result = -1;
+		while (0 != result) {
+			result = User32Ex.INSTANCE.GetMessage(msg, null, 0, 0);
+			if (-1 == result) {
+				log.error("Error in GetMessage! Aborting!");
+				break;
+			} else {
+				User32Ex.INSTANCE.TranslateMessage(msg);
+				User32Ex.INSTANCE.DispatchMessage(msg);
 			}
-
 		}
 
-		@Override
-		public void serviceStop() {
-			User32.INSTANCE.UnhookWinEvent(hookLocationOrNameChange);
-			User32.INSTANCE.UnhookWinEvent(hookForegroundChange);
-			log.info("Hooks unregistered");
-		}
+	}
 
-		/**
-		 * Convenience method
-		 */
-		private WinNT.HANDLE SetWinEventHook(int eventMin, int eventMax, WinUser.WinEventProc callback) {
-			final int WINEVENT_OUTOFCONTEXT = 0x0000;
-			return User32.INSTANCE.SetWinEventHook(eventMin, eventMax, null, callback, 0, 0, WINEVENT_OUTOFCONTEXT);
-		}
+	@Override
+	protected final void serviceStop() {
+		User32.INSTANCE.UnhookWinEvent(hookLocationChange);
+		User32.INSTANCE.UnhookWinEvent(hookNameChange);
+		User32.INSTANCE.UnhookWinEvent(hookForegroundChange);
+		log.info("Hooks unregistered");
+	}
+
+	/**
+	 * Convenience method
+	 */
+	private HANDLE SetWinEventHook(final int eventMin, final int eventMax, final WinEventProc callback) {
+		final int outOfContext = 0x0000;
+		return User32.INSTANCE.SetWinEventHook(eventMin, eventMax, null, callback, 0, 0, outOfContext);
 	}
 
 	/**
 	 * Shared callback for all window hooks we're interested in
 	 */
-	private class WinEventProcCallback implements WinUser.WinEventProc {
+	private class WinEventProcCallback implements WinEventProc {
+		private WinEventProcCallback() {
+		}
+
 		@Override
-		public void callback(WinNT.HANDLE hWinEventHook,
-							 WinDef.DWORD event,
-							 WinDef.HWND hWnd,
-							 WinDef.LONG idObject,
-							 WinDef.LONG idChild,
-							 WinDef.DWORD dwEventThread,
-							 WinDef.DWORD dwmsEventTime) {
+		public final void callback(final HANDLE hWinEventHook,
+								   final DWORD event,
+								   final HWND hwnd,
+								   final LONG idObject,
+								   final LONG idChild,
+								   final DWORD dwEventThread,
+								   final DWORD dwmsEventTime) {
 			if (WinUserEx.OBJID_WINDOW == idObject.longValue()) {
-				WindowInfo windowInfo = new WindowInfo(hWnd);
-				if (windowInfo.getStyleInfo().isReal()) {
-					WindowEventResponse windowEvent = WindowEventResponse.getEvent((int) event.longValue());
-					windowEvent.invoke(WindowWatcher.this, windowInfo);
+				final WindowInfo windowInfo = new WindowInfo(hwnd);
+				if (windowInfo.isRealWindow()) {
+					WindowEventResponse.invoke(event, WindowWatcher.this, windowInfo);
 				}
 			}
 		}
 	}
 
-
-	///////////////////
-	// Window event constants.
-	// Full descriptions at https://msdn.microsoft.com/en-us/library/windows/desktop/dd318066(v=vs.85).aspx
-	///////////////////
-	@SuppressWarnings("PublicMethodWithoutLogging")
-	enum WindowEventResponse {
+	private enum WindowEventResponse {
 		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND) {
 			@Override
 			public void invoke(final WindowWatcher windowWatcher, final WindowInfo newWindowInfo) {
@@ -139,8 +144,8 @@ public class WindowWatcher extends ModelService {
 				// check if hWnd is the same as top of the stack (i.e. foreground), if not then ignore it
 				if (windowWatcher.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
 					// get new title
-					WindowInfo foregroundWindowInfo = windowWatcher.foregroundWindows.peek();
-					String newTitle = foregroundWindowInfo.getTitle(true);
+					final WindowInfo foregroundWindowInfo = windowWatcher.foregroundWindows.peek();
+					final String newTitle = foregroundWindowInfo.getTitle(Cache.SKIP);
 					// update window title only if required
 					if (!newTitle.equals(foregroundWindowInfo.getTitle())) {
 						foregroundWindowInfo.setTitle(newTitle);
@@ -150,21 +155,22 @@ public class WindowWatcher extends ModelService {
 			}
 		};
 
-		private final int mEventConstant;
+		private final long mEventConstant;
 
-		WindowEventResponse(final int eventConstant) {
+		WindowEventResponse(final long eventConstant) {
 			mEventConstant = eventConstant;
 		}
 
-		public static WindowEventResponse getEvent(final int eventConstant) {
-			for (final WindowEventResponse windowEvent : values()) {
-				if (eventConstant == windowEvent.mEventConstant) {
-					return windowEvent;
+		@SuppressWarnings("StaticMethodOnlyUsedInOneClass")
+		static void invoke(final DWORD event, final WindowWatcher windowWatcher, final WindowInfo newWindowInfo) {
+			for (final WindowEventResponse response : values()) {
+				if (event.longValue() == response.mEventConstant) {
+					response.invoke(windowWatcher, newWindowInfo);
 				}
 			}
-			throw new RuntimeException("Unrecognized WindowEvent constant: " + eventConstant);
+			// some other event happened, ignore it
 		}
 
-		public abstract void invoke(WindowWatcher windowWatcher, WindowInfo newWindowInfo);
+		protected abstract void invoke(WindowWatcher windowWatcher, WindowInfo newWindowInfo);
 	}
 }

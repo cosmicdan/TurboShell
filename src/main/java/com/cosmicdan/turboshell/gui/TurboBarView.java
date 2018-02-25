@@ -1,8 +1,9 @@
-package com.cosmicdan.turboshell.ui;
+package com.cosmicdan.turboshell.gui;
 
-import com.cosmicdan.turboshell.ui.TurboBarContract.SysBtnAction;
-import com.cosmicdan.turboshell.ui.controls.AdaptiveButton;
-import com.cosmicdan.turboshell.ui.controls.TurboBarControlFactory;
+import com.cosmicdan.turboshell.gui.TurboBarContract.Presenter;
+import com.cosmicdan.turboshell.gui.TurboBarContract.View;
+import com.cosmicdan.turboshell.gui.TurboBarPresenter.SysBtnAction;
+import com.cosmicdan.turboshell.gui.controls.TurboBarControlFactory;
 import javafx.scene.Scene;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -16,51 +17,52 @@ import java.util.Collection;
  * TurboBar view
  * @author Daniel 'CosmicDan' Connolly
  */
-public class TurboBarView implements TurboBarContract.View {
+public class TurboBarView implements View {
 	private final Stage mPrimaryStage;
 	private final HBox pane;
 
-	private TurboBarContract.Presenter mPresenter;
+	private Presenter mPresenter = null;
 
-	public TurboBarView(Stage primaryStage) {
+	public TurboBarView(final Stage primaryStage) {
 		mPrimaryStage = primaryStage;
 		pane = new HBox();
 		pane.setId("turbobar");
 	}
 
 	@Override
-	public void setPresenter(TurboBarContract.Presenter presenter) {
+	public final void setPresenter(final Presenter presenter) {
 		mPresenter = presenter;
 	}
 
 	@Override
-	public void setup(int xPos, int width, int barHeight, String css) {
+	public final void setup(final int xPos, final int width, final int barHeight, final String css, String windowName) {
 		// initial stage setup
-		Scene scene = new Scene(pane, width, barHeight);
+		final Scene scene = new Scene(pane, width, barHeight);
 		scene.getStylesheets().add(css);
 		mPrimaryStage.initStyle(StageStyle.UNDECORATED);
 		mPrimaryStage.setScene(scene);
-		mPrimaryStage.setTitle(mPresenter.getWindowName());
+		mPrimaryStage.setTitle(windowName);
 		mPrimaryStage.setX(xPos);
 		mPrimaryStage.setY(0);
 		mPrimaryStage.setAlwaysOnTop(true);
 		mPrimaryStage.show();
-		addCoreControls(barHeight);
+		setupCoreControls(barHeight);
 	}
 
-	private void addCoreControls(int barHeight) {
+	private void setupCoreControls(final int barHeight) {
 		// Build the list of controls that we're going to add
-		final Collection<Region> coreControls = new ArrayList<>();
+		final Collection<Region> coreControls = new ArrayList<>(10);
 		// Start a new controls factory
 		final TurboBarControlFactory factory = new TurboBarControlFactory(getClass(), barHeight);
 
 		// Add all the controls we want from factory...
-		coreControls.add(factory.newCenterPaddingRegion());
+		coreControls.add(TurboBarControlFactory.newCenterPaddingRegion());
 
-		// sysbuttons
-		AdaptiveButton minimizeButton = factory.newGenericButton("TurboBar_sysbtn_minimize.png");
-		minimizeButton.setClickAction(() -> mPresenter.doSysbtnAction(SysBtnAction.MINIMIZE));
-		coreControls.add(minimizeButton);
+		// SysButton - Minimize
+		coreControls.add(factory.newGenericButton(
+				"TurboBar_sysbtn_minimize.png",
+				() -> mPresenter.doViewAction(SysBtnAction.MINIMIZE)
+		));
 
 		// All done, now actually add them to the stage
 		pane.getChildren().addAll(coreControls);

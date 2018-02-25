@@ -9,4 +9,7 @@ import lombok.Getter;
 public class TurboBarConfig {
 	@Getter
 	private final int mBarHeight = 25;
+
+	public TurboBarConfig() {
+	}
 }

@@ -2,6 +2,7 @@ package com.cosmicdan.turboshell.models;
 
 import lombok.extern.log4j.Log4j2;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -12,25 +13,41 @@ import java.util.Set;
  * @author Daniel 'CosmicDan' Connolly
  */
 @Log4j2
-public abstract class ModelService {
+public abstract class ModelService implements Runnable {
 	private final Object callbackLock = new Object();
-	private Set<CallbackInfo> mCallbacks;
+	private Set<CallbackInfo> mCallbacks = null;
 
-	ModelService() {
-		ModelServiceThread thread = getThread();
-		thread.start();
-	}
+	ModelService() {}
 
 	///////////////////
 	// Thread related things
 	///////////////////
 
-	/**
-	 * Provide a new instance of the thread to use for this ModelService.
-	 */
-	protected abstract ModelServiceThread getThread();
+	public void start() {
+		new Thread(this).start();
+	}
 
-	abstract class ModelServiceThread extends Thread {
+	@Override
+	public final void run() {
+		Runtime.getRuntime().addShutdownHook(new Thread(this::serviceStop));
+		serviceStart();
+	}
+
+	/**
+	 * Called when a start is requested. Do your typical Thread#run() stuff here.
+	 */
+	protected abstract void serviceStart();
+
+	/**
+	 * Called when a shutdown is request. Do environment cleanup here.
+	 */
+	protected abstract void serviceStop();
+
+	/*
+	abstract static class ModelServiceThread extends Thread {
+		protected ModelServiceThread() {
+		}
+
 		@Override
 		public final void run() {
 			Runtime.getRuntime().addShutdownHook(new Thread(this::serviceStop));
@@ -40,13 +57,14 @@ public abstract class ModelService {
 		/**
 		 * Called when a start is requested. Do your typical Thread#run() stuff here.
 		 */
-		public abstract void serviceStart();
+		//public abstract void serviceStart();
 
 		/**
 		 * Called when a shutdown is request. Do environment cleanup here.
 		 */
-		public abstract void serviceStop();
-	}
+		//public abstract void serviceStop();
+	//}
+
 
 	///////////////////
 	// Callback related things
@@ -57,44 +75,45 @@ public abstract class ModelService {
 		void run(Object data);
 	}
 
-	private static class CallbackInfo {
+	private static final class CallbackInfo {
 		private final int mPayloadId;
 		private final PayloadCallback mCallback;
 
-		private CallbackInfo(int payloadId, PayloadCallback callback) {
+		private CallbackInfo(final int payloadId, final PayloadCallback callback) {
 			mPayloadId = payloadId;
 			mCallback = callback;
 		}
 
-		void run(Object data) {
+		void run(final Object data) {
 			mCallback.run(data);
 		}
 	}
 
-	public void registerCallback(int payloadId, PayloadCallback callback) {
+	public final void registerCallback(final int payloadId, final PayloadCallback callback) {
 		if (null == callback)
 			return;
 
 		synchronized(callbackLock) {
-			if (mCallbacks == null)
+			if (null == mCallbacks)
 				mCallbacks = new HashSet<>(1);
 			mCallbacks.add(new CallbackInfo(payloadId, callback));
 		}
 	}
 
-	void runCallbacks(int payloadId, Object data) {
-		Set<CallbackInfo> callbacksCopy;
-
+	@SuppressWarnings("MethodWithMultipleLoops")
+	final void runCallbacks(final int payloadId, final Object data) {
+		Collection<CallbackInfo> callbacksCopy;
 		synchronized(callbackLock) {
-			if (mCallbacks == null) return;
-			callbacksCopy = new HashSet<>();
-			for (CallbackInfo callback : mCallbacks) {
-				if (callback.mPayloadId == payloadId)
-					callbacksCopy.add(callback);
+			callbacksCopy = new HashSet<>(mCallbacks.size());
+			if (null != mCallbacks) {
+				for (final CallbackInfo callback : mCallbacks) {
+					if (callback.mPayloadId == payloadId)
+						callbacksCopy.add(callback);
+				}
 			}
 		}
 
-		for (CallbackInfo callback : callbacksCopy) {
+		for (final CallbackInfo callback : callbacksCopy) {
 			callback.run(data);
 		}
 	}
