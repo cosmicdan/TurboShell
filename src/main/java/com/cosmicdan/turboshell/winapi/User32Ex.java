@@ -6,6 +6,7 @@ import com.sun.jna.NativeLibrary;
 import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.BaseTSD.LONG_PTR;
 import com.sun.jna.platform.win32.User32;
+import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.LPARAM;
 import com.sun.jna.platform.win32.WinDef.LRESULT;
@@ -48,6 +49,8 @@ public class User32Ex {
 	public final native HWND GetAncestor(HWND hwnd, int gaFlags);
 	/** See {@link User32#GetWindow} */
 	public final native HWND GetWindow(HWND hWnd, int uCmd);
+	/** Sets the show state of a window without waiting for the operation to complete. */
+	public final native WinDef.BOOL ShowWindowAsync(HWND hWnd, int nCmdShow);
 
 	// Callback/Window message related stuff
 	/** See {@link User32#GetMessage} */
@@ -57,7 +60,7 @@ public class User32Ex {
 	/** See {@link User32#DispatchMessage} */
 	public final native LRESULT DispatchMessage(MSG lpMsg);
 
-	// For gettong window titles
+	// For getting window titles
 	/** See {@link User32#GetWindowTextLength} */
 	public final native int GetWindowTextLength(HWND hWnd);
 	/** See {@link User32#GetWindowText} */

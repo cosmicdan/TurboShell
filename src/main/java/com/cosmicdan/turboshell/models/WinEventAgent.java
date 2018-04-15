@@ -10,6 +10,7 @@ import com.sun.jna.platform.win32.WinDef.DWORD;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.LONG;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
+import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.WinUser.MSG;
 import com.sun.jna.platform.win32.WinUser.WinEventProc;
 import lombok.extern.log4j.Log4j2;
@@ -26,13 +27,15 @@ public class WinEventAgent extends AgentModel {
 	public static final int PAYLOAD_WINDOW_TITLE = 0;
 
 	private final SizedStack<WindowInfo> foregroundWindows = new SizedStack<>(10);
+	private final HWND mInitialTopHwnd;
 
 	// all callbacks as class fields to avoid GC
 	private HANDLE hookLocationChange = null;
 	private HANDLE hookNameChange = null;
 	private HANDLE hookForegroundChange = null;
 
-	public WinEventAgent() {
+	public WinEventAgent(final HWND initialTopHwnd) {
+		mInitialTopHwnd = initialTopHwnd;
 	}
 
 	@SuppressWarnings("FeatureEnvy")
@@ -60,6 +63,9 @@ public class WinEventAgent extends AgentModel {
 				WinUserEx.EVENT_SYSTEM_FOREGROUND,
 				callback
 		);
+
+		// add the current foreground window to the stack
+		addCandidateToForegroundStack(new DWORD(WinUserEx.EVENT_SYSTEM_FOREGROUND), mInitialTopHwnd);
 
 		final MSG msg = new MSG();
 		int result = -1;
@@ -111,12 +117,24 @@ public class WinEventAgent extends AgentModel {
 								   final DWORD dwEventThread,
 								   final DWORD dwmsEventTime) {
 			if (WinUserEx.OBJID_WINDOW == idObject.longValue()) {
-				final WindowInfo windowInfo = new WindowInfo(hwnd);
-				if (windowInfo.isRealWindow()) {
-					WindowEventResponse.invoke(event, mWinEventAgent, windowInfo);
-				}
+				mWinEventAgent.addCandidateToForegroundStack(event, hwnd);
 			}
 		}
+	}
+
+	/**
+	 * Called by WinEventProcCallback when foreground window changes to add it to the foreground window stack,
+	 * if it's valid. Also called on startup.
+	 * @param event Should be WinUserEx.EVENT_SYSTEM_FOREGROUND
+	 * @param hWnd The hWnd that has come to the foreground
+	 * @return true if isRealWindow was true, otherwise false
+	 */
+	private boolean addCandidateToForegroundStack(final DWORD event, final HWND hWnd) {
+		final WindowInfo windowInfo = new WindowInfo(hWnd);
+		final boolean isRealWindow = windowInfo.isRealWindow();
+		if (isRealWindow)
+			WindowEventResponse.invoke(event, this, windowInfo);
+		return isRealWindow;
 	}
 
 	@SuppressWarnings("FeatureEnvy")
@@ -179,5 +197,15 @@ public class WinEventAgent extends AgentModel {
 		}
 
 		protected abstract void invoke(WinEventAgent winEventAgent, WindowInfo newWindowInfo);
+	}
+
+	//////////////////////////////////////////////////////////////
+	// Presenter-requested actions (i.e. user-invoked)
+	//////////////////////////////////////////////////////////////
+
+	public void minimizeForeground() {
+		if (!foregroundWindows.isEmpty()) {
+			User32Ex.INSTANCE.ShowWindowAsync(foregroundWindows.peek().getHWnd(), WinUser.SW_MINIMIZE);
+		}
 	}
 }

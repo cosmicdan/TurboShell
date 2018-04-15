@@ -51,7 +51,7 @@ public class TurboBarPresenter implements Presenter {
 	private boolean mIsTopmost = false;
 
 	// agents
-	WinEventAgent winEventAgent;
+	private static WinEventAgent WINEVENT_AGENT;
 
 	public TurboBarPresenter() {
 	}
@@ -65,10 +65,11 @@ public class TurboBarPresenter implements Presenter {
 		if (null == cssResources)
 			throw new RuntimeException("Could not load TurboBar.css!");
 		final String css = cssResources.toExternalForm();
+		// ...cache the currently active hWnd...
+		final HWND initialTopHwnd = User32.INSTANCE.GetForegroundWindow();
 		// ...then create the JavaFX scene for TurboBar
-		final HWND lastForegroundWindow = User32.INSTANCE.GetForegroundWindow();
 		view.setup(workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight, css, WINDOW_NAME);
-		User32.INSTANCE.SetForegroundWindow(lastForegroundWindow);
+		User32.INSTANCE.SetForegroundWindow(initialTopHwnd);
 		view.setPresenter(this);
 
 		// cache TurboBar's hWnd for future native operations
@@ -90,7 +91,7 @@ public class TurboBarPresenter implements Presenter {
 		appBarData = setupAppbar(workAreaXAndWidth, turboBarHeight);
 
 		// setup some models and register for observing
-		setupModelsAndObservers();
+		setupModelsAndObservers(initialTopHwnd);
 
 		// finally, add a shutdown hook to cleanup
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -129,13 +130,13 @@ public class TurboBarPresenter implements Presenter {
 		return appBarData;
 	}
 
-	private void setupModelsAndObservers() {
-		winEventAgent = new WinEventAgent();
-		winEventAgent.registerCallback(
+	private void setupModelsAndObservers(HWND initialTopHwnd) {
+		WINEVENT_AGENT = new WinEventAgent(initialTopHwnd);
+		WINEVENT_AGENT.registerCallback(
 				WinEventAgent.PAYLOAD_WINDOW_TITLE,
 				(Object data) -> updateWindowTitle((String)data)
 		);
-		winEventAgent.start();
+		WINEVENT_AGENT.start();
 	}
 
 	//////////////////////////////////////////////////////////////
@@ -236,9 +237,7 @@ public class TurboBarPresenter implements Presenter {
 
 	enum SysBtnAction implements ViewAction {
 		MINIMIZE((Presenter presenter, Event event) -> {
-			// TODO: Actually minimize
-			log.info("Got minimize action!");
-
+			WINEVENT_AGENT.minimizeForeground();
 		}),
 		RESIZE((Presenter presenter, Event event) -> {
 
@@ -257,7 +256,5 @@ public class TurboBarPresenter implements Presenter {
 		public void invoke(final Presenter presenter, final Event event) {
 			mViewAction.invoke(presenter, event);
 		}
-
-
 	}
 }
