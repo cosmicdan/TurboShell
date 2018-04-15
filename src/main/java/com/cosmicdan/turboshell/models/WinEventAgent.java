@@ -15,13 +15,13 @@ import com.sun.jna.platform.win32.WinUser.WinEventProc;
 import lombok.extern.log4j.Log4j2;
 
 /**
- * Active model (observable service) that hooks window-related events on the system - mostly the foreground window
- * properties. A loop that waits for callback messages runs in it's own thread.
+ * Agent model for hooking and responding to WinEvents on the system, and also initiates windows-related events triggered by a
+ * Presenter. Callbacks are processed in its own thread.
  * @author Daniel 'CosmicDan' Connolly
  */
 @SuppressWarnings("CyclicClassDependency")
 @Log4j2
-public class WindowWatcher extends ModelService {
+public class WinEventAgent extends AgentModel {
 	// Callback ID's
 	public static final int PAYLOAD_WINDOW_TITLE = 0;
 
@@ -32,7 +32,7 @@ public class WindowWatcher extends ModelService {
 	private HANDLE hookNameChange = null;
 	private HANDLE hookForegroundChange = null;
 
-	public WindowWatcher() {
+	public WinEventAgent() {
 	}
 
 	@SuppressWarnings("FeatureEnvy")
@@ -96,10 +96,10 @@ public class WindowWatcher extends ModelService {
 	 * Shared callback for all window hooks we're interested in
 	 */
 	private static class WinEventProcCallback implements WinEventProc {
-		private final WindowWatcher mWindowWatcher;
+		private final WinEventAgent mWinEventAgent;
 
-		private WinEventProcCallback(WindowWatcher windowWatcher) {
-			mWindowWatcher = windowWatcher;
+		private WinEventProcCallback(WinEventAgent winEventAgent) {
+			mWinEventAgent = winEventAgent;
 		}
 
 		@Override
@@ -113,7 +113,7 @@ public class WindowWatcher extends ModelService {
 			if (WinUserEx.OBJID_WINDOW == idObject.longValue()) {
 				final WindowInfo windowInfo = new WindowInfo(hwnd);
 				if (windowInfo.isRealWindow()) {
-					WindowEventResponse.invoke(event, mWindowWatcher, windowInfo);
+					WindowEventResponse.invoke(event, mWinEventAgent, windowInfo);
 				}
 			}
 		}
@@ -123,40 +123,40 @@ public class WindowWatcher extends ModelService {
 	private enum WindowEventResponse {
 		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND) {
 			@Override
-			public void invoke(final WindowWatcher windowWatcher, final WindowInfo newWindowInfo) {
+			public void invoke(final WinEventAgent winEventAgent, final WindowInfo newWindowInfo) {
 				//log.info("Foreground window changed");
 				// If the new hWnd exists anywhere in the stack, remove it
-				for (int i = 0; i < windowWatcher.foregroundWindows.size(); i++) {
-					if (windowWatcher.foregroundWindows.get(i).getHWnd().equals(newWindowInfo.getHWnd())) {
-						windowWatcher.foregroundWindows.remove(i);
+				for (int i = 0; i < winEventAgent.foregroundWindows.size(); i++) {
+					if (winEventAgent.foregroundWindows.get(i).getHWnd().equals(newWindowInfo.getHWnd())) {
+						winEventAgent.foregroundWindows.remove(i);
 						break;
 					}
 				}
 				// add the fresh hwnd to top of the stack
-				windowWatcher.foregroundWindows.push(newWindowInfo);
+				winEventAgent.foregroundWindows.push(newWindowInfo);
 				// callback for window title update
-				windowWatcher.runCallbacks(PAYLOAD_WINDOW_TITLE, newWindowInfo.getTitle());
+				winEventAgent.runCallbacks(PAYLOAD_WINDOW_TITLE, newWindowInfo.getTitle());
 			}
 		},
 		EVENT_OBJECT_LOCATIONCHANGE(WinUserEx.EVENT_OBJECT_LOCATIONCHANGE) {
 			@Override
-			public void invoke(final WindowWatcher windowWatcher, final WindowInfo newWindowInfo) {
+			public void invoke(final WinEventAgent winEventAgent, final WindowInfo newWindowInfo) {
 				//log.info("A window location changed");
 			}
 		},
 		EVENT_OBJECT_NAMECHANGE(WinUserEx.EVENT_OBJECT_NAMECHANGE) {
 			@Override
-			public void invoke(final WindowWatcher windowWatcher, final WindowInfo newWindowInfo) {
+			public void invoke(final WinEventAgent winEventAgent, final WindowInfo newWindowInfo) {
 				// check if hWnd is the same as top of the stack (i.e. foreground), if not then ignore it
-				if (!windowWatcher.foregroundWindows.isEmpty() &&
-						windowWatcher.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
+				if (!winEventAgent.foregroundWindows.isEmpty() &&
+						winEventAgent.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
 					// get new title
-					final WindowInfo foregroundWindowInfo = windowWatcher.foregroundWindows.peek();
+					final WindowInfo foregroundWindowInfo = winEventAgent.foregroundWindows.peek();
 					final String newTitle = foregroundWindowInfo.getTitle(Cache.SKIP);
 					// update window title only if required
 					if (!newTitle.equals(foregroundWindowInfo.getTitle())) {
 						foregroundWindowInfo.setTitle(newTitle);
-						windowWatcher.runCallbacks(PAYLOAD_WINDOW_TITLE, newTitle);
+						winEventAgent.runCallbacks(PAYLOAD_WINDOW_TITLE, newTitle);
 					}
 				}
 			}
@@ -169,15 +169,15 @@ public class WindowWatcher extends ModelService {
 		}
 
 		@SuppressWarnings("StaticMethodOnlyUsedInOneClass")
-		static void invoke(final DWORD event, final WindowWatcher windowWatcher, final WindowInfo newWindowInfo) {
+		static void invoke(final DWORD event, final WinEventAgent winEventAgent, final WindowInfo newWindowInfo) {
 			for (final WindowEventResponse response : values()) {
 				if (event.longValue() == response.mEventConstant) {
-					response.invoke(windowWatcher, newWindowInfo);
+					response.invoke(winEventAgent, newWindowInfo);
 				}
 			}
 			// some other event happened, ignore it
 		}
 
-		protected abstract void invoke(WindowWatcher windowWatcher, WindowInfo newWindowInfo);
+		protected abstract void invoke(WinEventAgent winEventAgent, WindowInfo newWindowInfo);
 	}
 }

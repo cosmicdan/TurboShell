@@ -1,7 +1,7 @@
 package com.cosmicdan.turboshell.gui;
 
 import com.cosmicdan.turboshell.models.TurboBarConfig;
-import com.cosmicdan.turboshell.models.WindowWatcher;
+import com.cosmicdan.turboshell.models.WinEventAgent;
 import com.cosmicdan.turboshell.models.WindowsEnvironment;
 import com.cosmicdan.turboshell.gui.TurboBarContract.Presenter;
 import com.cosmicdan.turboshell.gui.TurboBarContract.View;
@@ -49,6 +49,9 @@ public class TurboBarPresenter implements Presenter {
 
 	// cached values to save unnecessary WinAPI calls
 	private boolean mIsTopmost = false;
+
+	// agents
+	WinEventAgent winEventAgent;
 
 	public TurboBarPresenter() {
 	}
@@ -126,13 +129,13 @@ public class TurboBarPresenter implements Presenter {
 		return appBarData;
 	}
 
-	private static void setupModelsAndObservers() {
-		final WindowWatcher windowWatcher = new WindowWatcher();
-		windowWatcher.registerCallback(
-				WindowWatcher.PAYLOAD_WINDOW_TITLE,
+	private void setupModelsAndObservers() {
+		winEventAgent = new WinEventAgent();
+		winEventAgent.registerCallback(
+				WinEventAgent.PAYLOAD_WINDOW_TITLE,
 				(Object data) -> updateWindowTitle((String)data)
 		);
-		windowWatcher.start();
+		winEventAgent.start();
 	}
 
 	//////////////////////////////////////////////////////////////
@@ -169,7 +172,7 @@ public class TurboBarPresenter implements Presenter {
 			public void invoke(final LPARAM lParam) {
 				final boolean fullscreenEntered = (1 == lParam.intValue());
 				log.info("Fullscreen entered: {}", fullscreenEntered);
-				// TODO: Ping the WindowWatcher model with fullscreenChange flag so it can react accordingly
+				// TODO: Ping the WinEventAgent model with fullscreenChange flag so it can react accordingly
 			}
 		};
 
@@ -235,6 +238,7 @@ public class TurboBarPresenter implements Presenter {
 		MINIMIZE((Presenter presenter, Event event) -> {
 			// TODO: Actually minimize
 			log.info("Got minimize action!");
+
 		}),
 		RESIZE((Presenter presenter, Event event) -> {
 

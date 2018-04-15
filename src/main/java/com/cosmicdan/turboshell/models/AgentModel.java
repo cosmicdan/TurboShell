@@ -7,17 +7,17 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A template for "service"-type models. These have a runtime loop in their own thread and allow other classes (e.g.
- * a Presenter, if following an MVP pattern) to register callbacks to updates in the ModelService data. It's up to the
- * ModelService to send the callbacks manually.
+ * A template for "agent"-type models. These have a runtime loop in their own thread and allow other classes (e.g.
+ * a Presenter, if following an MVP pattern) to register callbacks for updating data or sending requests to the AgentModel.
+ * It's up to the AgentModel to react or respond to these callbacks, if necessary.
  * @author Daniel 'CosmicDan' Connolly
  */
 @Log4j2
-public abstract class ModelService implements Runnable {
+public abstract class AgentModel implements Runnable {
 	private final Object callbackLock = new Object();
 	private Set<CallbackInfo> mCallbacks = null;
 
-	ModelService() {}
+	AgentModel() {}
 
 	///////////////////
 	// Thread related things
