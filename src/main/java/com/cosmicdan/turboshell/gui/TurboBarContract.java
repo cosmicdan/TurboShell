@@ -12,6 +12,8 @@ import javafx.event.Event;
 public interface TurboBarContract {
 	interface View extends MvpView<Presenter> {
 		void setup(int xPos, int width, int barHeight, String css, String windowName);
+
+		void refreshSize(final int xPos, final int width, final int barHeight);
 	}
 
 	interface Presenter extends MvpPresenter {

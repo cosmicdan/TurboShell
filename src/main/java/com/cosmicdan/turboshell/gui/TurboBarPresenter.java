@@ -63,7 +63,6 @@ public class TurboBarPresenter implements Presenter {
 			throw new RuntimeException("Could not load TurboBar.css!");
 		final String css = cssResources.toExternalForm();
 		// ...then create the JavaFX scene for TurboBar
-		// TODO: TurboBar scene creation steals focus. Get the currently-active hWnd here, then re-activate it after setup()
 		final HWND lastForegroundWindow = User32.INSTANCE.GetForegroundWindow();
 		view.setup(workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight, css, WINDOW_NAME);
 		User32.INSTANCE.SetForegroundWindow(lastForegroundWindow);
@@ -73,13 +72,16 @@ public class TurboBarPresenter implements Presenter {
 		turboBarHWnd = new HWND();
 		turboBarHWnd.setPointer(new Pointer(Window.getWindows().get(0).getNativeWindow()));
 
-		// apply desired window styles to the TurboBar (toolwindow = no taskbar entry)
+		// (JavaFX workaround) apply desired window styles to the TurboBar to make it "undecorated" and not appear on taskbar nor alt-tab
+		User32Ex.INSTANCE.SetWindowLongPtr(turboBarHWnd, WinUser.GWL_STYLE,
+				Pointer.createConstant(WinUser.WS_VISIBLE | WinUser.WS_POPUP | WinUser.WS_CLIPCHILDREN)
+		);
 		User32Ex.INSTANCE.SetWindowLongPtr(turboBarHWnd, WinUser.GWL_EXSTYLE,
 				Pointer.createConstant(WinUserEx.WS_EX_NOACTIVATE | WinUserEx.WS_EX_TOOLWINDOW | WinUserEx.WS_EX_TOPMOST)
 		);
 
-		// set topmost initially, along with other important window flags
-		setTopmost(true);
+		// we need to re-set the size and position after setting window styles (JavaFX workaround)
+		view.refreshSize(workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight);
 
 		// setup the appbar...
 		appBarData = setupAppbar(workAreaXAndWidth, turboBarHeight);

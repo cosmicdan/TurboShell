@@ -40,14 +40,21 @@ public class TurboBarView implements View {
 		// initial stage setup
 		final Scene scene = new Scene(pane, width, barHeight);
 		scene.getStylesheets().add(css);
-		mPrimaryStage.initStyle(StageStyle.UNDECORATED);
+		mPrimaryStage.initStyle(StageStyle.UTILITY);
 		mPrimaryStage.setScene(scene);
 		mPrimaryStage.setTitle(windowName);
+		refreshSize(xPos, width, barHeight);
+		mPrimaryStage.setAlwaysOnTop(true);
+		setupCoreControls(barHeight);
+	}
+
+	@Override
+	public final void refreshSize(final int xPos, final int width, final int barHeight) {
+		mPrimaryStage.setWidth(width);
+		mPrimaryStage.setHeight(barHeight);
 		mPrimaryStage.setX(xPos);
 		mPrimaryStage.setY(0);
-		mPrimaryStage.setAlwaysOnTop(true);
 		mPrimaryStage.show();
-		setupCoreControls(barHeight);
 	}
 
 	private void setupCoreControls(final int barHeight) {
