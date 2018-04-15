@@ -16,7 +16,6 @@ import com.sun.jna.platform.win32.Shell32;
 import com.sun.jna.platform.win32.ShellAPI;
 import com.sun.jna.platform.win32.ShellAPI.APPBARDATA;
 import com.sun.jna.platform.win32.ShellAPI.APPBARDATA.ByReference;
-import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinDef.DWORD;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.LPARAM;
@@ -34,28 +33,29 @@ import java.net.URL;
  * TurboBar presenter
  * @author Daniel 'CosmicDan' Connolly
  */
+@SuppressWarnings({"FieldCanBeLocal", "CyclicClassDependency", "ClassWithTooManyDependencies"})
 @Log4j2
 public class TurboBarPresenter implements Presenter {
 	private static final String WINDOW_NAME = "TurboShell's TurboBar";
 	private static final int turboBarFlags = WinUser.SWP_NOMOVE | WinUser.SWP_NOSIZE | WinUser.SWP_NOACTIVATE;
 	private static final int WM_USER_APPBAR_CALLBACK = WinUser.WM_USER + 808;
 
-	private HWND turboBarHWnd;
+	private HWND turboBarHWnd = null;
 
 	// all callbacks as class fields to avoid GC
-	private APPBARDATA appBarData;
-	private TurboBarWinProcCallback winProcCallback;
+	private APPBARDATA appBarData = null;
+	private TurboBarWinProcCallback winProcCallback = null;
 
 	// cached values to save unnecessary WinAPI calls
 	private boolean mIsTopmost = false;
 
-	public TurboBarPresenter() {}
+	public TurboBarPresenter() {
+	}
 
-	public TurboBarPresenter setup(final View view, final WindowsEnvironment winEnv) {
-		final TurboBarConfig config = new TurboBarConfig();
-
+	@SuppressWarnings("ReturnOfThis")
+	public final TurboBarPresenter setup(final View view) {
 		// gather data for building the initial TurboBar view...
-		final int turboBarHeight = config.getBarHeight();
+		final int turboBarHeight = TurboBarConfig.getBarHeight();
 		final int[] workAreaXAndWidth = WindowsEnvironment.getWorkAreaXAndWidth();
 		final URL cssResources = getClass().getResource("TurboBar.css");
 		if (null == cssResources)
@@ -92,8 +92,8 @@ public class TurboBarPresenter implements Presenter {
 		return this;
 	}
 
-	private APPBARDATA setupAppbar(int[] workAreaXAndWidth, int turboBarHeight) {
-		final APPBARDATA appBarData = new ByReference();
+	private APPBARDATA setupAppbar(final int[] workAreaXAndWidth, final int turboBarHeight) {
+		appBarData = new ByReference();
 		appBarData.cbSize.setValue(appBarData.size());
 		appBarData.hWnd = turboBarHWnd;
 		appBarData.uCallbackMessage.setValue(WM_USER_APPBAR_CALLBACK);
@@ -109,10 +109,9 @@ public class TurboBarPresenter implements Presenter {
 		} else {
 			throw new RuntimeException("Error registering TurboBar with SHAppBarMessage!");
 		}
-		// ...and it's callback
-		final LONG_PTR turboBarWinProcBase = User32Ex.INSTANCE.GetWindowLongPtr(
-				turboBarHWnd, WinUser.GWL_WNDPROC);
-		winProcCallback = new TurboBarWinProcCallback(turboBarWinProcBase);
+		// ...and its callback
+		final LONG_PTR turboBarWinProcBase = User32Ex.INSTANCE.GetWindowLongPtr(turboBarHWnd, WinUser.GWL_WNDPROC);
+		winProcCallback = new TurboBarWinProcCallback(turboBarWinProcBase, turboBarHWnd);
 		final LONG_PTR appBarCallbackResult = User32Ex.INSTANCE.SetWindowLongPtr(
 				turboBarHWnd, WinUser.GWL_WNDPROC, winProcCallback);
 		if (0 == appBarCallbackResult.longValue()) {
@@ -121,7 +120,7 @@ public class TurboBarPresenter implements Presenter {
 		return appBarData;
 	}
 
-	private void setupModelsAndObservers() {
+	private static void setupModelsAndObservers() {
 		final WindowWatcher windowWatcher = new WindowWatcher();
 		windowWatcher.registerCallback(
 				WindowWatcher.PAYLOAD_WINDOW_TITLE,
@@ -134,32 +133,36 @@ public class TurboBarPresenter implements Presenter {
 	// Self-managed logic - AppBar messages from environment
 	//////////////////////////////////////////////////////////////
 
-	private class TurboBarWinProcCallback implements WindowProc {
+	private static class TurboBarWinProcCallback implements WindowProc {
 		// Store the original window procedure for chain-calling it
 		private final LONG_PTR mTurboBarWinProcBase;
+		private final HWND mTurboBarHWnd;
 
-		TurboBarWinProcCallback(final LONG_PTR turboBarWinProcBase) {
+		TurboBarWinProcCallback(final LONG_PTR turboBarWinProcBase, final HWND turboBarHWnd) {
 			mTurboBarWinProcBase = turboBarWinProcBase;
+			mTurboBarHWnd = turboBarHWnd;
 		}
 
 		@Override
 		public final LRESULT callback(final HWND hwnd, final int uMsg, final WPARAM wParam, final LPARAM lParam) {
 			if (WM_USER_APPBAR_CALLBACK == uMsg) {
+				//log.info("Invoke appbar callback...");
 				//log.info(hWnd + "; " + uMsg + "; " + wParam.intValue() + "; " + lParam.intValue());
-				log.info("Invoke appbar callback...");
 				AppbarCallback.invoke(wParam, lParam);
 			}
+
 			// pass it on...
-			return User32Ex.INSTANCE.CallWindowProc(mTurboBarWinProcBase.toPointer(), turboBarHWnd, uMsg, wParam, lParam);
+			return User32Ex.INSTANCE.CallWindowProc(mTurboBarWinProcBase.toPointer(), mTurboBarHWnd, uMsg, wParam, lParam);
 		}
 	}
 
+	@SuppressWarnings("Singleton")
 	private enum AppbarCallback {
 		ABN_FULLSCREENAPP(ShellAPIEx.ABN_FULLSCREENAPP) {
 			@Override
 			public void invoke(final LPARAM lParam) {
 				final boolean fullscreenEntered = (1 == lParam.intValue());
-				log.info("Fullscreen entered: " + fullscreenEntered);
+				log.info("Fullscreen entered: {}", fullscreenEntered);
 				// TODO: Ping the WindowWatcher model with fullscreenChange flag so it can react accordingly
 			}
 		};
@@ -170,7 +173,6 @@ public class TurboBarPresenter implements Presenter {
 			mAppbarCallbackConst = appbarCallbackConst;
 		}
 
-		@SuppressWarnings("StaticMethodOnlyUsedInOneClass")
 		static void invoke(final WPARAM wParam, final LPARAM lParam) {
 			for (final AppbarCallback callback : values()) {
 				if (wParam.intValue() == callback.mAppbarCallbackConst) {
@@ -180,18 +182,19 @@ public class TurboBarPresenter implements Presenter {
 			// some other event happened, ignore it
 		}
 
-		abstract void invoke(WinDef.LPARAM lParam);
+		abstract void invoke(LPARAM lParam);
 	}
+
 
 	//////////////////////////////////////////////////////////////
 	// Model-sourced logic (i.e. environment/data changes)
 	//////////////////////////////////////////////////////////////
 
-	private void updateWindowTitle(final String windowTitle) {
-		log.info("Got window title update: " + windowTitle);
+	private static void updateWindowTitle(final String windowTitle) {
+		log.info("Got window title update: {}", windowTitle);
 	}
 
-	private final void setTopmost(final boolean topmost) {
+	private void setTopmost(final boolean topmost) {
 		if (topmost == mIsTopmost)
 			return;
 		User32Ex.INSTANCE.SetWindowPos(
@@ -204,7 +207,7 @@ public class TurboBarPresenter implements Presenter {
 		mIsTopmost = topmost;
 	}
 
-	private final boolean isTopmost() {
+	private boolean isTopmost() {
 		return mIsTopmost;
 	}
 
@@ -233,14 +236,14 @@ public class TurboBarPresenter implements Presenter {
 
 		});
 
-		private ViewAction mViewAction;
+		private final ViewAction mViewAction;
 
 		SysBtnAction(final ViewAction viewAction) {
 			mViewAction = viewAction;
 		}
 
 		@Override
-		public void invoke(Presenter presenter, Event event) {
+		public void invoke(final Presenter presenter, final Event event) {
 			mViewAction.invoke(presenter, event);
 		}
 

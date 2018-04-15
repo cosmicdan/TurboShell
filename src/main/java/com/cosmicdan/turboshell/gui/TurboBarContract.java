@@ -8,7 +8,7 @@ import javafx.event.Event;
  * Contract between TurboBar view and presenter
  * @author Daniel 'CosmicDan' Connolly
  */
-@SuppressWarnings({"InterfaceNeverImplemented", "ClassIndependentOfModule"})
+@SuppressWarnings({"InterfaceNeverImplemented", "ClassIndependentOfModule", "PublicInnerClass"})
 public interface TurboBarContract {
 	interface View extends MvpView<Presenter> {
 		void setup(int xPos, int width, int barHeight, String css, String windowName);

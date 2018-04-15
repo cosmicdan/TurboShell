@@ -19,6 +19,7 @@ import lombok.extern.log4j.Log4j2;
  * properties. A loop that waits for callback messages runs in it's own thread.
  * @author Daniel 'CosmicDan' Connolly
  */
+@SuppressWarnings("CyclicClassDependency")
 @Log4j2
 public class WindowWatcher extends ModelService {
 	// Callback ID's
@@ -26,34 +27,35 @@ public class WindowWatcher extends ModelService {
 
 	private final SizedStack<WindowInfo> foregroundWindows = new SizedStack<>(10);
 
-	public WindowWatcher() {
-	}
-
 	// all callbacks as class fields to avoid GC
 	private HANDLE hookLocationChange = null;
 	private HANDLE hookNameChange = null;
 	private HANDLE hookForegroundChange = null;
 
+	public WindowWatcher() {
+	}
+
+	@SuppressWarnings("FeatureEnvy")
 	@Override
 	protected final void serviceStart() {
 		log.info("Starting...");
-		final WinEventProc callback = new WinEventProcCallback();
+		final WinEventProc callback = new WinEventProcCallback(this);
 
 		// hook window location changes
-		hookLocationChange = SetWinEventHook(
+		hookLocationChange = setWinEventHook(
 				WinUserEx.EVENT_OBJECT_LOCATIONCHANGE,
 				WinUserEx.EVENT_OBJECT_LOCATIONCHANGE,
 				callback
 		);
 
-		hookNameChange = SetWinEventHook(
+		hookNameChange = setWinEventHook(
 				WinUserEx.EVENT_OBJECT_NAMECHANGE,
 				WinUserEx.EVENT_OBJECT_NAMECHANGE,
 				callback
 		);
 
 		// hook foreground window changes
-		hookForegroundChange = SetWinEventHook(
+		hookForegroundChange = setWinEventHook(
 				WinUserEx.EVENT_SYSTEM_FOREGROUND,
 				WinUserEx.EVENT_SYSTEM_FOREGROUND,
 				callback
@@ -85,7 +87,7 @@ public class WindowWatcher extends ModelService {
 	/**
 	 * Convenience method
 	 */
-	private HANDLE SetWinEventHook(final int eventMin, final int eventMax, final WinEventProc callback) {
+	private static HANDLE setWinEventHook(final int eventMin, final int eventMax, final WinEventProc callback) {
 		final int outOfContext = 0x0000;
 		return User32.INSTANCE.SetWinEventHook(eventMin, eventMax, null, callback, 0, 0, outOfContext);
 	}
@@ -93,12 +95,15 @@ public class WindowWatcher extends ModelService {
 	/**
 	 * Shared callback for all window hooks we're interested in
 	 */
-	private class WinEventProcCallback implements WinEventProc {
-		private WinEventProcCallback() {
+	private static class WinEventProcCallback implements WinEventProc {
+		private final WindowWatcher mWindowWatcher;
+
+		private WinEventProcCallback(WindowWatcher windowWatcher) {
+			mWindowWatcher = windowWatcher;
 		}
 
 		@Override
-		public final void callback(final HANDLE hWinEventHook,
+		public void callback(final HANDLE hWinEventHook,
 								   final DWORD event,
 								   final HWND hwnd,
 								   final LONG idObject,
@@ -108,12 +113,13 @@ public class WindowWatcher extends ModelService {
 			if (WinUserEx.OBJID_WINDOW == idObject.longValue()) {
 				final WindowInfo windowInfo = new WindowInfo(hwnd);
 				if (windowInfo.isRealWindow()) {
-					WindowEventResponse.invoke(event, WindowWatcher.this, windowInfo);
+					WindowEventResponse.invoke(event, mWindowWatcher, windowInfo);
 				}
 			}
 		}
 	}
 
+	@SuppressWarnings("FeatureEnvy")
 	private enum WindowEventResponse {
 		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND) {
 			@Override

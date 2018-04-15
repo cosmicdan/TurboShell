@@ -3,13 +3,10 @@ package com.cosmicdan.turboshell.gui.controls;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.scene.input.InputEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-
-import java.util.EventListener;
 
 /**
  * @author Daniel 'CosmicDan' Connolly
@@ -26,7 +23,7 @@ public class TurboBarControlFactory {
 	/**
 	 * @return An auto-stretch region for HBox children, providing right-aligned controls for anything that follows.
 	 */
-	public static final Region newCenterPaddingRegion() {
+	public static Region newCenterPaddingRegion() {
 		final Region centerPadding = new Region();
 		HBox.setHgrow(centerPadding, Priority.ALWAYS);
 		return centerPadding;
@@ -48,11 +45,8 @@ public class TurboBarControlFactory {
 		final AdaptiveButton button = new AdaptiveButton(mSourceClass, text, imageResourcePaths);
 		button.setPrefHeight(mTurboBarHeight - 1);
 
-		button.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-			@Override
-			public void handle(MouseEvent event) {
+		button.addEventFilter(MouseEvent.MOUSE_CLICKED, (MouseEvent event) -> {
 
-			}
 		});
 
 		button.addEventHandler(eventType, eventHandler);

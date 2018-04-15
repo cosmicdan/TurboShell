@@ -36,7 +36,7 @@ public class TurboBarView implements View {
 	}
 
 	@Override
-	public final void setup(final int xPos, final int width, final int barHeight, final String css, String windowName) {
+	public final void setup(final int xPos, final int width, final int barHeight, final String css, final String windowName) {
 		// initial stage setup
 		final Scene scene = new Scene(pane, width, barHeight);
 		scene.getStylesheets().add(css);

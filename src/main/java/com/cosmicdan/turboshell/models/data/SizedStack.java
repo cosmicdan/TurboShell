@@ -7,6 +7,7 @@ import java.util.Stack;
  * Thanks to "Calvin" at StackOverflow for this simple solution
  * https://stackoverflow.com/a/16206356/1767892
  */
+@SuppressWarnings("ClassExtendsConcreteCollection")
 public final class SizedStack<T> extends Stack<T> {
 	private final int mMaxSize;
 

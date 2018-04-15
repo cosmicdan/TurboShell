@@ -1,8 +1,6 @@
 package com.cosmicdan.turboshell;
 
-import com.cosmicdan.turboshell.gui.TurboBarContract;
 import com.cosmicdan.turboshell.gui.TurboBarContract.View;
-import com.cosmicdan.turboshell.models.WindowsEnvironment;
 import com.cosmicdan.turboshell.gui.TurboBarContract.Presenter;
 import com.cosmicdan.turboshell.gui.TurboBarPresenter;
 import com.cosmicdan.turboshell.gui.TurboBarView;
@@ -26,16 +24,14 @@ public final class Main {
 	}
 
 	public static class App extends Application {
-		public App() {
-		}
+		public App() {}
 
 		@Override
 		public final void start(final Stage primaryStage) {
 			log.info("Starting TurboShell...");
-			final WindowsEnvironment winEnv = new WindowsEnvironment();
 
 			final View turboBarView = new TurboBarView(primaryStage);
-			final Presenter turboBarPresenter = new TurboBarPresenter().setup(turboBarView, winEnv);
+			final Presenter turboBarPresenter = new TurboBarPresenter().setup(turboBarView);
 		}
 	}
 }

@@ -12,6 +12,7 @@ import lombok.extern.log4j.Log4j2;
  */
 @Log4j2
 public class WindowInfo {
+	@SuppressWarnings("PublicInnerClass")
 	public enum Cache {USE, SKIP}
 
 	private final HWND mHWnd;
@@ -35,8 +36,9 @@ public class WindowInfo {
 	}
 
 	public final String getTitle(final Cache cache) {
+		// TODO: Get title of the owner/top window. Can be reproduced from Notepad++ "Reload" (modified file elsewhere) prompt
 		String windowTitle = "[No title]";
-		if ((null == mTitle) || (Cache.SKIP.equals(cache))) {
+		if ((null == mTitle) || (Cache.SKIP == cache)) {
 			// get the title for the new window
 			final int titleLength = User32Ex.INSTANCE.GetWindowTextLength(mHWnd) + 1;
 			final char[] title = new char[titleLength];
@@ -45,7 +47,7 @@ public class WindowInfo {
 				windowTitle = new String(title);
 			// TODO: else set process name to title?
 			//log.info("Title refresh to '" + windowTitle + "'");
-			if (Cache.USE.equals(cache))
+			if (Cache.USE == cache)
 				mTitle = windowTitle;
 		}
 		return windowTitle;

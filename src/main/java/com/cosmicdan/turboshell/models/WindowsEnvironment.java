@@ -5,15 +5,14 @@ import com.sun.jna.platform.win32.WinDef.POINT.ByValue;
 import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.WinUser.HMONITOR;
 import com.sun.jna.platform.win32.WinUser.MONITORINFO;
+import lombok.experimental.UtilityClass;
 
 /**
  * Passive model (not observable) for requesting windows environment data on-demand.
  * @author Daniel 'CosmicDan' Connolly
  */
+@UtilityClass
 public final class WindowsEnvironment {
-	public WindowsEnvironment() {
-	}
-
 	/**
 	 * Get the work area starting x-position and width
 	 * @return An int[] of two members:<br>

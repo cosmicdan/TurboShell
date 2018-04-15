@@ -14,7 +14,7 @@ import java.net.URL;
 
 @Log4j2
 public class AdaptiveButton extends Button {
-	public enum AddTextPadding {LEFT, RIGHT, BOTH}
+	protected enum AddTextPadding {LEFT, RIGHT, BOTH}
 
 	@SuppressWarnings("ObjectAllocationInLoop")
 	AdaptiveButton(final Class<?> mSourceClass, final String text, final String[] imageResourcePaths) {
@@ -38,9 +38,9 @@ public class AdaptiveButton extends Button {
 	private void setText(final String text, final AddTextPadding padding) {
 		// dodgy way of adding space between icon and label
 		String newText = text;
-		if ((AddTextPadding.LEFT.equals(padding)) || (AddTextPadding.BOTH.equals(padding)))
+		if ((AddTextPadding.LEFT == padding) || (AddTextPadding.BOTH == padding))
 			newText = "  " + newText;
-		if ((AddTextPadding.RIGHT.equals(padding)) || (AddTextPadding.BOTH.equals(padding)))
+		if ((AddTextPadding.RIGHT == padding) || (AddTextPadding.BOTH == padding))
 			newText += "  ";
 		setText(newText);
 	}

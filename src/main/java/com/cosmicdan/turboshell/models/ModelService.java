@@ -23,7 +23,7 @@ public abstract class ModelService implements Runnable {
 	// Thread related things
 	///////////////////
 
-	public void start() {
+	public final void start() {
 		new Thread(this).start();
 	}
 
@@ -48,6 +48,7 @@ public abstract class ModelService implements Runnable {
 	// Callback related things
 	///////////////////
 
+	@SuppressWarnings("PublicInnerClass")
 	@FunctionalInterface
 	public interface PayloadCallback {
 		void run(Object data);
@@ -80,14 +81,12 @@ public abstract class ModelService implements Runnable {
 
 	@SuppressWarnings("MethodWithMultipleLoops")
 	final void runCallbacks(final int payloadId, final Object data) {
-		Collection<CallbackInfo> callbacksCopy;
+		final Collection<CallbackInfo> callbacksCopy;
 		synchronized(callbackLock) {
 			callbacksCopy = new HashSet<>(mCallbacks.size());
-			if (null != mCallbacks) {
-				for (final CallbackInfo callback : mCallbacks) {
-					if (callback.mPayloadId == payloadId)
-						callbacksCopy.add(callback);
-				}
+			for (final CallbackInfo callback : mCallbacks) {
+				if (callback.mPayloadId == payloadId)
+					callbacksCopy.add(callback);
 			}
 		}
 
