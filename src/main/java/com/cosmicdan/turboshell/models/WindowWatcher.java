@@ -148,7 +148,8 @@ public class WindowWatcher extends ModelService {
 			@Override
 			public void invoke(final WindowWatcher windowWatcher, final WindowInfo newWindowInfo) {
 				// check if hWnd is the same as top of the stack (i.e. foreground), if not then ignore it
-				if (windowWatcher.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
+				if (!windowWatcher.foregroundWindows.isEmpty() &&
+						windowWatcher.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
 					// get new title
 					final WindowInfo foregroundWindowInfo = windowWatcher.foregroundWindows.peek();
 					final String newTitle = foregroundWindowInfo.getTitle(Cache.SKIP);

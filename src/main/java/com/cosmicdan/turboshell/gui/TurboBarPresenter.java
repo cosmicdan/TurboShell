@@ -16,6 +16,7 @@ import com.sun.jna.platform.win32.Shell32;
 import com.sun.jna.platform.win32.ShellAPI;
 import com.sun.jna.platform.win32.ShellAPI.APPBARDATA;
 import com.sun.jna.platform.win32.ShellAPI.APPBARDATA.ByReference;
+import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef.DWORD;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.LPARAM;
@@ -63,7 +64,9 @@ public class TurboBarPresenter implements Presenter {
 		final String css = cssResources.toExternalForm();
 		// ...then create the JavaFX scene for TurboBar
 		// TODO: TurboBar scene creation steals focus. Get the currently-active hWnd here, then re-activate it after setup()
+		final HWND lastForegroundWindow = User32.INSTANCE.GetForegroundWindow();
 		view.setup(workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight, css, WINDOW_NAME);
+		User32.INSTANCE.SetForegroundWindow(lastForegroundWindow);
 		view.setPresenter(this);
 
 		// cache TurboBar's hWnd for future native operations
@@ -89,6 +92,7 @@ public class TurboBarPresenter implements Presenter {
 			log.info("TurboBar shutdown...");
 			Shell32.INSTANCE.SHAppBarMessage(new DWORD(ShellAPI.ABM_REMOVE), appBarData);
 		}));
+
 		return this;
 	}
 
@@ -227,6 +231,7 @@ public class TurboBarPresenter implements Presenter {
 
 	enum SysBtnAction implements ViewAction {
 		MINIMIZE((Presenter presenter, Event event) -> {
+			// TODO: Actually minimize
 			log.info("Got minimize action!");
 		}),
 		RESIZE((Presenter presenter, Event event) -> {
