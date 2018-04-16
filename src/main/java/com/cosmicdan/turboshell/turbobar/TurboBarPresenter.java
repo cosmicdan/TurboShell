@@ -3,8 +3,8 @@ package com.cosmicdan.turboshell.turbobar;
 import com.cosmicdan.turboshell.models.TurboShellConfig;
 import com.cosmicdan.turboshell.models.WinEventAgent;
 import com.cosmicdan.turboshell.models.WindowsEnvironment;
-import com.cosmicdan.turboshell.turbobar.TurboBarContract.Presenter;
-import com.cosmicdan.turboshell.turbobar.TurboBarContract.View;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
 import com.cosmicdan.turboshell.winapi.ShellAPIEx;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinApiException;
@@ -31,34 +31,32 @@ import lombok.extern.log4j.Log4j2;
 import java.net.URL;
 
 /**
- * TurboBar presenter. Contains all the back-end logic for a View (updating and responding it) as well as delegating between
- * views and models.
+ * TurboBar presenter. Contains all the back-end logic for the View (updating and responding to it) as well as delegating between
+ * view actions and models/agents.
  * @author Daniel 'CosmicDan' Connolly
  */
 @SuppressWarnings({"FieldCanBeLocal", "CyclicClassDependency", "ClassWithTooManyDependencies"})
 @Log4j2
-public class TurboBarPresenter implements Presenter {
+public class TurboBarPresenter implements ITurboBarPresenter {
 	private static final String WINDOW_NAME = "TurboShell's TurboBar";
 	private static final int turboBarFlags = WinUser.SWP_NOMOVE | WinUser.SWP_NOSIZE | WinUser.SWP_NOACTIVATE;
 	private static final int WM_USER_APPBAR_CALLBACK = WinUser.WM_USER + 808;
 
-	private HWND turboBarHWnd = null;
+	private static HWND turboBarHWnd = null;
+	private static ITurboBarView turboBarView = null;
 
 	// all callbacks as class fields to avoid GC
 	private APPBARDATA appBarData = null;
 	private TurboBarWinProcCallback winProcCallback = null;
 
 	// cached values to save unnecessary WinAPI calls
-	private boolean mIsTopmost = false;
-
-	// agents
-	private static WinEventAgent winEventAgent = null;
+	private static boolean mIsTopmost = true;
 
 	public TurboBarPresenter() {
 	}
 
 	@SuppressWarnings("ReturnOfThis")
-	public final TurboBarPresenter setup(final View view) {
+	public final TurboBarPresenter setup(final ITurboBarView view) {
 		// gather data for building the initial TurboBar view...
 		final int turboBarHeight = TurboShellConfig.getTurboBarHeight();
 		final int[] workAreaXAndWidth = WindowsEnvironment.getWorkAreaXAndWidth();
@@ -69,9 +67,10 @@ public class TurboBarPresenter implements Presenter {
 		// ...cache the currently active hWnd...
 		final HWND initialTopHwnd = User32.INSTANCE.GetForegroundWindow();
 		// ...then create the JavaFX scene for TurboBar
-		view.setup(workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight, css, WINDOW_NAME);
+		turboBarView = view;
+		turboBarView.setup(workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight, css, WINDOW_NAME);
 		User32.INSTANCE.SetForegroundWindow(initialTopHwnd);
-		view.setPresenter(this);
+		turboBarView.setPresenter(this);
 
 		// cache TurboBar's hWnd for future native operations
 		turboBarHWnd = new HWND();
@@ -86,7 +85,7 @@ public class TurboBarPresenter implements Presenter {
 		);
 
 		// we need to re-set the size and position after setting window styles (JavaFX workaround)
-		view.refreshSize(workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight);
+		turboBarView.refreshSize(workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight);
 
 		// setup the appbar...
 		appBarData = setupAppbar(workAreaXAndWidth, turboBarHeight);
@@ -103,6 +102,14 @@ public class TurboBarPresenter implements Presenter {
 		return this;
 	}
 
+	/**
+	 * Helper method for registering the TurboBar as an AppBar.
+	 * @param workAreaXAndWidth A provided value from {@link WindowsEnvironment#getWorkAreaXAndWidth()}
+	 * @param turboBarHeight The height of the TurboBar, as retrieved from config.
+	 * @return An instance of APPBARDATA, mostly use for unregistering on a shutdown hook.
+	 * @see <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/cc144177(v=vs.85).aspx">
+	 *     Using Application Desktop Toolbars on MSDN</a>
+	 */
 	private APPBARDATA setupAppbar(final int[] workAreaXAndWidth, final int turboBarHeight) {
 		appBarData = new ByReference();
 		appBarData.cbSize.setValue(appBarData.size());
@@ -131,19 +138,27 @@ public class TurboBarPresenter implements Presenter {
 		return appBarData;
 	}
 
+	/**
+	 * Setup models/agents that this Presenter will be communicating with.
+	 * @param initialTopHwnd The initial foreground hWnd that was retrieved on TurboShell startup, so it can be re-activated after
+	 *                       TurboShell steals focus
+	 */
 	private void setupModelsAndObservers(HWND initialTopHwnd) {
-		winEventAgent = new WinEventAgent(initialTopHwnd);
-		winEventAgent.registerCallback(
+		WinEventAgent.INSTANCE.setInitialTopHwnd(initialTopHwnd);
+		WinEventAgent.INSTANCE.registerCallback(
 				WinEventAgent.PAYLOAD_WINDOW_TITLE,
 				(Object data) -> updateWindowTitle((String)data)
 		);
-		winEventAgent.start();
+		WinEventAgent.INSTANCE.start();
 	}
 
 	//////////////////////////////////////////////////////////////
 	// Self-managed logic - AppBar messages from environment
 	//////////////////////////////////////////////////////////////
 
+	/**
+	 * Shared callback for AppBar events
+	 */
 	private static class TurboBarWinProcCallback implements WindowProc {
 		// Store the original window procedure for chain-calling it
 		private final LONG_PTR mTurboBarWinProcBase;
@@ -170,17 +185,16 @@ public class TurboBarPresenter implements Presenter {
 		}
 	}
 
-	@FunctionalInterface
-	interface IAppbarCallback {
-		void invoke(final LPARAM lParam);
-	}
-
+	/**
+	 * TurboBarWinProcCallback (AppBar callback) response logic
+	 */
 	@SuppressWarnings("Singleton")
 	private enum AppbarCallback implements IAppbarCallback {
 		ABN_FULLSCREENAPP(ShellAPIEx.ABN_FULLSCREENAPP, (LPARAM lParam) -> {
 			final boolean fullscreenEntered = (1 == lParam.intValue());
 			log.info("Fullscreen entered: {}", fullscreenEntered);
 			// TODO: Ping the WinEventAgent model with fullscreenChange flag so it can react accordingly. Exclude desktop though!
+			setTopmost(!fullscreenEntered);
 		});
 
 		private final int mAppbarCallbackConstant;
@@ -197,30 +211,39 @@ public class TurboBarPresenter implements Presenter {
 		}
 	}
 
+	@FunctionalInterface
+	interface IAppbarCallback {
+		void invoke(final LPARAM lParam);
+	}
+
 
 	//////////////////////////////////////////////////////////////
-	// Model-sourced logic (i.e. environment/data changes)
+	// Model/agent-sourced or locally-logic (e.g. reactions to environment changes)
 	//////////////////////////////////////////////////////////////
 
+	/**
+	 * Registered with WinEventAgent when window title changes are detected. Forwards it onto the relevant view(s).
+	 * @param windowTitle The new window title, as returned by WinEventAgent
+	 */
 	private static void updateWindowTitle(final String windowTitle) {
 		log.info("Got window title update: {}", windowTitle);
 	}
 
-	private void setTopmost(final boolean topmost) {
-		if (topmost == mIsTopmost)
+	/**
+	 * Called from AppBar
+	 * @param topmost
+	 */
+	private static void setTopmost(final boolean topmost) {
+		if (topmost == mIsTopmost) // cache check to save API calls
 			return;
 		User32Ex.INSTANCE.SetWindowPos(
 				turboBarHWnd,
 				topmost ? WinUserEx.HWND_TOPMOST : WinUserEx.HWND_BOTTOM,
 				0, 0, 0, 0, turboBarFlags
 		);
-		//if (topmost) // Will put TurboBar above *other* topmost windows too. Probably not necessary...
-		//	User32Ex.INSTANCE.SetWindowPos(turboBarHWnd, WinUserEx.HWND_TOP , 0, 0, 0, 0, turboBarFlags);
+		if (topmost) // Will put TurboBar above *other* topmost windows too. Might not be necessary but meh.
+			User32Ex.INSTANCE.SetWindowPos(turboBarHWnd, WinUserEx.HWND_TOP , 0, 0, 0, 0, turboBarFlags);
 		mIsTopmost = topmost;
-	}
-
-	private boolean isTopmost() {
-		return mIsTopmost;
 	}
 
 	//////////////////////////////////////////////////////////////
@@ -228,24 +251,17 @@ public class TurboBarPresenter implements Presenter {
 	//////////////////////////////////////////////////////////////
 
 	/**
-	 * Main entrypoint for view actions.
+	 * SysButton actions
 	 */
-	/*
-	@Override
-	public final void doViewAction(final ViewAction action, final Event event) {
-		action.invoke(event);
-	}
-	*/
-
 	@SuppressWarnings("NonFinalStaticVariableUsedInClassInitialization")
 	enum SysBtnAction implements ViewAction {
-		MINIMIZE((Presenter presenter, Event event) -> {
-			winEventAgent.minimizeForeground();
+		MINIMIZE((ITurboBarPresenter presenter, Event event) -> {
+			WinEventAgent.INSTANCE.minimizeForeground();
 		}),
-		RESIZE((Presenter presenter, Event event) -> {
+		RESIZE((ITurboBarPresenter presenter, Event event) -> {
 
 		}),
-		CLOSE((Presenter presenter, Event event) -> {
+		CLOSE((ITurboBarPresenter presenter, Event event) -> {
 
 		});
 
@@ -256,7 +272,7 @@ public class TurboBarPresenter implements Presenter {
 		}
 
 		@Override
-		public void invoke(final Presenter presenter, final Event event) {
+		public void invoke(final ITurboBarPresenter presenter, final Event event) {
 			mViewAction.invoke(presenter, event);
 		}
 	}

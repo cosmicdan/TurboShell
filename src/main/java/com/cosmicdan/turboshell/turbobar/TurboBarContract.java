@@ -8,17 +8,17 @@ import javafx.event.Event;
  */
 @SuppressWarnings({"InterfaceNeverImplemented", "ClassIndependentOfModule", "PublicInnerClass"})
 public interface TurboBarContract {
-	interface View {
-		void setPresenter(Presenter presenter);
+	interface ITurboBarView {
+		void setPresenter(ITurboBarPresenter presenter);
 		void setup(int xPos, int width, int barHeight, String css, String windowName);
 		void refreshSize(final int xPos, final int width, final int barHeight);
 	}
 
 	@SuppressWarnings("MarkerInterface")
-	interface Presenter {
+	interface ITurboBarPresenter {
 		@FunctionalInterface
 		interface ViewAction {
-			void invoke(Presenter presenter, Event event);
+			void invoke(ITurboBarPresenter presenter, Event event);
 		}
 	}
 }

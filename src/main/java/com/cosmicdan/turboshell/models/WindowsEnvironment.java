@@ -6,12 +6,14 @@ import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.WinUser.HMONITOR;
 import com.sun.jna.platform.win32.WinUser.MONITORINFO;
 import lombok.experimental.UtilityClass;
+import lombok.extern.log4j.Log4j2;
 
 /**
- * Passive model (not observable) for requesting windows environment data on-demand.
+ * Passive model (non-observable Singleton) for requesting windows environment data on-demand.
  * @author Daniel 'CosmicDan' Connolly
  */
 @UtilityClass
+@Log4j2(topic = "WindowsEnvironment")
 public final class WindowsEnvironment {
 	/**
 	 * Get the work area starting x-position and width

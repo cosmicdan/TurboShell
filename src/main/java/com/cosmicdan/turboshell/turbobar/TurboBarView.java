@@ -1,9 +1,8 @@
 package com.cosmicdan.turboshell.turbobar;
 
-import com.cosmicdan.turboshell.turbobar.TurboBarContract.Presenter;
-import com.cosmicdan.turboshell.turbobar.TurboBarContract.View;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
 import com.cosmicdan.turboshell.turbobar.TurboBarPresenter.SysBtnAction;
-import com.cosmicdan.turboshell.turbobar.TurboBarControlFactory;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -18,11 +17,11 @@ import java.util.Collection;
  * TurboBar view
  * @author Daniel 'CosmicDan' Connolly
  */
-public class TurboBarView implements View {
+public class TurboBarView implements ITurboBarView {
 	private final Stage mPrimaryStage;
 	private final HBox pane;
 
-	private Presenter mPresenter = null;
+	private ITurboBarPresenter mPresenter = null;
 
 	public TurboBarView(final Stage primaryStage) {
 		mPrimaryStage = primaryStage;
@@ -31,7 +30,7 @@ public class TurboBarView implements View {
 	}
 
 	@Override
-	public final void setPresenter(final Presenter presenter) {
+	public final void setPresenter(final ITurboBarPresenter presenter) {
 		mPresenter = presenter;
 	}
 

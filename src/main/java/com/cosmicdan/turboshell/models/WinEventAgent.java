@@ -12,6 +12,7 @@ import com.sun.jna.platform.win32.WinNT.HANDLE;
 import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.WinUser.MSG;
 import com.sun.jna.platform.win32.WinUser.WinEventProc;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -22,20 +23,18 @@ import lombok.extern.log4j.Log4j2;
 @SuppressWarnings("CyclicClassDependency")
 @Log4j2
 public class WinEventAgent extends AgentModel {
+	public static final WinEventAgent INSTANCE = new WinEventAgent();
+
 	// Callback ID's
 	public static final int PAYLOAD_WINDOW_TITLE = 0;
 
 	private final SizedStack<WindowInfo> foregroundWindows = new SizedStack<>(10);
-	private final HWND mInitialTopHwnd;
+	@Setter	private HWND mInitialTopHwnd;
 
 	// all callbacks as class fields to avoid GC
 	private HANDLE hookLocationChange = null;
 	private HANDLE hookNameChange = null;
 	private HANDLE hookForegroundChange = null;
-
-	public WinEventAgent(final HWND initialTopHwnd) {
-		mInitialTopHwnd = initialTopHwnd;
-	}
 
 	@SuppressWarnings("FeatureEnvy")
 	@Override
@@ -102,12 +101,12 @@ public class WinEventAgent extends AgentModel {
 	}
 
 	/**
-	 * Shared callback for all window hooks we're interested in
+	 * Shared callback for the window event hooks we're interested in
 	 */
 	private static final class WinEventProcCallback implements WinEventProc {
 		private final WinEventAgent mWinEventAgent;
 
-		private WinEventProcCallback(WinEventAgent winEventAgent) {
+		private WinEventProcCallback(final WinEventAgent winEventAgent) {
 			mWinEventAgent = winEventAgent;
 		}
 
@@ -132,11 +131,9 @@ public class WinEventAgent extends AgentModel {
 		}
 	}
 
-	@FunctionalInterface
-	interface IWindowEventResponse {
-		void invoke(WinEventAgent winEventAgent, WindowInfo newWindowInfo);
-	}
-
+	/**
+	 * WinEventProcCallback (window event hooks) response logic
+	 */
 	@SuppressWarnings({"FeatureEnvy", "OverlyLongLambda"})
 	enum WindowEventResponse implements IWindowEventResponse {
 		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
@@ -186,13 +183,27 @@ public class WinEventAgent extends AgentModel {
 		}
 	}
 
+	@FunctionalInterface
+	interface IWindowEventResponse {
+		void invoke(WinEventAgent winEventAgent, WindowInfo newWindowInfo);
+	}
+
 	//////////////////////////////////////////////////////////////
 	// Presenter-requested actions (i.e. user-invoked)
 	//////////////////////////////////////////////////////////////
 
+	/**
+	 * Perform minimize on the foreground window.
+	 * Only peeks at the foregroundWindows stack - the callback will update the stack via WindowEventResponse if/when the foreground
+	 * window changes as a result.
+	 */
 	public final void minimizeForeground() {
 		if (!foregroundWindows.isEmpty()) {
 			User32Ex.INSTANCE.ShowWindowAsync(foregroundWindows.peek().getHWnd(), WinUser.SW_MINIMIZE);
 		}
 	}
+
+
+
+
 }

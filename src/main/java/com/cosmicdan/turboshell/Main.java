@@ -1,7 +1,7 @@
 package com.cosmicdan.turboshell;
 
-import com.cosmicdan.turboshell.turbobar.TurboBarContract.View;
-import com.cosmicdan.turboshell.turbobar.TurboBarContract.Presenter;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
 import com.cosmicdan.turboshell.turbobar.TurboBarPresenter;
 import com.cosmicdan.turboshell.turbobar.TurboBarView;
 import javafx.application.Application;
@@ -30,8 +30,8 @@ public final class Main {
 		public final void start(final Stage primaryStage) {
 			log.info("Starting TurboShell...");
 
-			final View turboBarView = new TurboBarView(primaryStage);
-			final Presenter turboBarPresenter = new TurboBarPresenter().setup(turboBarView);
+			final ITurboBarView turboBarView = new TurboBarView(primaryStage);
+			final ITurboBarPresenter turboBarPresenter = new TurboBarPresenter().setup(turboBarView);
 		}
 	}
 }
