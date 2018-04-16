@@ -155,6 +155,7 @@ public class WinEventAgent extends AgentModel {
 		}),
 		EVENT_OBJECT_LOCATIONCHANGE(WinUserEx.EVENT_OBJECT_LOCATIONCHANGE, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
 			log.info("A window location changed");
+			// TODO: Check if the top of the Window is above the TurboBar (like Discord does when you 'restore' it), if so nudge it down
 		}),
 		EVENT_OBJECT_NAMECHANGE(WinUserEx.EVENT_OBJECT_NAMECHANGE, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
 			// check if hWnd is the same as top of the stack (i.e. foreground), if not then ignore it

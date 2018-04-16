@@ -1,5 +1,6 @@
-package com.cosmicdan.turboshell.gui.controls;
+package com.cosmicdan.turboshell.turbobar;
 
+import com.cosmicdan.turboshell.gui.AdaptiveButton;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -9,6 +10,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 
 /**
+ * Main factory for creating TurboBar controls
  * @author Daniel 'CosmicDan' Connolly
  */
 public class TurboBarControlFactory {

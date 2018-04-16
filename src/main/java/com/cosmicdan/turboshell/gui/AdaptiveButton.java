@@ -1,4 +1,4 @@
-package com.cosmicdan.turboshell.gui.controls;
+package com.cosmicdan.turboshell.gui;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -9,6 +9,7 @@ import java.io.File;
 import java.net.URL;
 
 /**
+ * A button with graphic and dynamic text
  * @author Daniel 'CosmicDan' Connolly
  */
 
@@ -17,7 +18,7 @@ public class AdaptiveButton extends Button {
 	protected enum AddTextPadding {LEFT, RIGHT, BOTH}
 
 	@SuppressWarnings("ObjectAllocationInLoop")
-	AdaptiveButton(final Class<?> mSourceClass, final String text, final String[] imageResourcePaths) {
+	public AdaptiveButton(final Class<?> mSourceClass, final String text, final String[] imageResourcePaths) {
 		super(text);
 		final ImageView[] mImageViews = new ImageView[imageResourcePaths.length];
 		if (0 < mImageViews.length) {
@@ -44,8 +45,9 @@ public class AdaptiveButton extends Button {
 			newText += "  ";
 		setText(newText);
 	}
-
+	/*
 	public final void setClickAction(final Runnable runnable) {
 		addEventFilter(MouseEvent.MOUSE_CLICKED, (MouseEvent event) -> runnable.run());
 	}
+	*/
 }

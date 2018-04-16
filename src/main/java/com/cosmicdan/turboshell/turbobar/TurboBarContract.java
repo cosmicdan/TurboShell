@@ -1,7 +1,5 @@
-package com.cosmicdan.turboshell.gui;
+package com.cosmicdan.turboshell.turbobar;
 
-import com.cosmicdan.turboshell.gui.base.MvpPresenter;
-import com.cosmicdan.turboshell.gui.base.MvpView;
 import javafx.event.Event;
 
 /**
@@ -10,13 +8,14 @@ import javafx.event.Event;
  */
 @SuppressWarnings({"InterfaceNeverImplemented", "ClassIndependentOfModule", "PublicInnerClass"})
 public interface TurboBarContract {
-	interface View extends MvpView<Presenter> {
+	interface View {
+		void setPresenter(Presenter presenter);
 		void setup(int xPos, int width, int barHeight, String css, String windowName);
-
 		void refreshSize(final int xPos, final int width, final int barHeight);
 	}
 
-	interface Presenter extends MvpPresenter {
+	@SuppressWarnings("MarkerInterface")
+	interface Presenter {
 		@FunctionalInterface
 		interface ViewAction {
 			void invoke(Presenter presenter, Event event);

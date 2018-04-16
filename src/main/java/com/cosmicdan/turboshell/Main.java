@@ -1,9 +1,9 @@
 package com.cosmicdan.turboshell;
 
-import com.cosmicdan.turboshell.gui.TurboBarContract.View;
-import com.cosmicdan.turboshell.gui.TurboBarContract.Presenter;
-import com.cosmicdan.turboshell.gui.TurboBarPresenter;
-import com.cosmicdan.turboshell.gui.TurboBarView;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.View;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.Presenter;
+import com.cosmicdan.turboshell.turbobar.TurboBarPresenter;
+import com.cosmicdan.turboshell.turbobar.TurboBarView;
 import javafx.application.Application;
 import javafx.stage.Stage;
 import lombok.extern.log4j.Log4j2;

@@ -1,9 +1,9 @@
-package com.cosmicdan.turboshell.gui;
+package com.cosmicdan.turboshell.turbobar;
 
-import com.cosmicdan.turboshell.gui.TurboBarContract.Presenter;
-import com.cosmicdan.turboshell.gui.TurboBarContract.View;
-import com.cosmicdan.turboshell.gui.TurboBarPresenter.SysBtnAction;
-import com.cosmicdan.turboshell.gui.controls.TurboBarControlFactory;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.Presenter;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.View;
+import com.cosmicdan.turboshell.turbobar.TurboBarPresenter.SysBtnAction;
+import com.cosmicdan.turboshell.turbobar.TurboBarControlFactory;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;

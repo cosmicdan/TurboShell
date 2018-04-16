@@ -1,10 +1,10 @@
-package com.cosmicdan.turboshell.gui;
+package com.cosmicdan.turboshell.turbobar;
 
-import com.cosmicdan.turboshell.models.TurboBarConfig;
+import com.cosmicdan.turboshell.models.TurboShellConfig;
 import com.cosmicdan.turboshell.models.WinEventAgent;
 import com.cosmicdan.turboshell.models.WindowsEnvironment;
-import com.cosmicdan.turboshell.gui.TurboBarContract.Presenter;
-import com.cosmicdan.turboshell.gui.TurboBarContract.View;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.Presenter;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.View;
 import com.cosmicdan.turboshell.winapi.ShellAPIEx;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinApiException;
@@ -31,7 +31,8 @@ import lombok.extern.log4j.Log4j2;
 import java.net.URL;
 
 /**
- * TurboBar presenter
+ * TurboBar presenter. Contains all the back-end logic for a View (updating and responding it) as well as delegating between
+ * views and models.
  * @author Daniel 'CosmicDan' Connolly
  */
 @SuppressWarnings({"FieldCanBeLocal", "CyclicClassDependency", "ClassWithTooManyDependencies"})
@@ -51,7 +52,7 @@ public class TurboBarPresenter implements Presenter {
 	private boolean mIsTopmost = false;
 
 	// agents
-	private static WinEventAgent WINEVENT_AGENT;
+	private static WinEventAgent winEventAgent = null;
 
 	public TurboBarPresenter() {
 	}
@@ -59,7 +60,7 @@ public class TurboBarPresenter implements Presenter {
 	@SuppressWarnings("ReturnOfThis")
 	public final TurboBarPresenter setup(final View view) {
 		// gather data for building the initial TurboBar view...
-		final int turboBarHeight = TurboBarConfig.getBarHeight();
+		final int turboBarHeight = TurboShellConfig.getTurboBarHeight();
 		final int[] workAreaXAndWidth = WindowsEnvironment.getWorkAreaXAndWidth();
 		final URL cssResources = getClass().getResource("TurboBar.css");
 		if (null == cssResources)
@@ -131,12 +132,12 @@ public class TurboBarPresenter implements Presenter {
 	}
 
 	private void setupModelsAndObservers(HWND initialTopHwnd) {
-		WINEVENT_AGENT = new WinEventAgent(initialTopHwnd);
-		WINEVENT_AGENT.registerCallback(
+		winEventAgent = new WinEventAgent(initialTopHwnd);
+		winEventAgent.registerCallback(
 				WinEventAgent.PAYLOAD_WINDOW_TITLE,
 				(Object data) -> updateWindowTitle((String)data)
 		);
-		WINEVENT_AGENT.start();
+		winEventAgent.start();
 	}
 
 	//////////////////////////////////////////////////////////////
@@ -239,7 +240,7 @@ public class TurboBarPresenter implements Presenter {
 	@SuppressWarnings("NonFinalStaticVariableUsedInClassInitialization")
 	enum SysBtnAction implements ViewAction {
 		MINIMIZE((Presenter presenter, Event event) -> {
-			WINEVENT_AGENT.minimizeForeground();
+			winEventAgent.minimizeForeground();
 		}),
 		RESIZE((Presenter presenter, Event event) -> {
 
