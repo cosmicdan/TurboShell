@@ -2,7 +2,6 @@ package com.cosmicdan.turboshell.models;
 
 import com.cosmicdan.turboshell.models.data.SizedStack;
 import com.cosmicdan.turboshell.models.data.WindowInfo;
-import com.cosmicdan.turboshell.models.data.WindowInfo.Cache;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinUserEx;
 import com.sun.jna.platform.win32.User32;
@@ -64,9 +63,13 @@ public class WinEventAgent extends AgentModel {
 				callback
 		);
 
-		// add the current foreground window to the stack
-		addCandidateToForegroundStack(new DWORD(WinUserEx.EVENT_SYSTEM_FOREGROUND), mInitialTopHwnd);
+		// add the current foreground window to the stack, if possible
+		final WindowInfo windowInfo = new WindowInfo(mInitialTopHwnd);
+		final boolean isRealWindow = windowInfo.isRealWindow();
+		if (isRealWindow)
+			WindowEventResponse.EVENT_SYSTEM_FOREGROUND.invoke(this, windowInfo);
 
+		// start runtime/message loop
 		final MSG msg = new MSG();
 		int result = -1;
 		while (0 != result) {
@@ -101,7 +104,7 @@ public class WinEventAgent extends AgentModel {
 	/**
 	 * Shared callback for all window hooks we're interested in
 	 */
-	private static class WinEventProcCallback implements WinEventProc {
+	private static final class WinEventProcCallback implements WinEventProc {
 		private final WinEventAgent mWinEventAgent;
 
 		private WinEventProcCallback(WinEventAgent winEventAgent) {
@@ -117,93 +120,76 @@ public class WinEventAgent extends AgentModel {
 								   final DWORD dwEventThread,
 								   final DWORD dwmsEventTime) {
 			if (WinUserEx.OBJID_WINDOW == idObject.longValue()) {
-				mWinEventAgent.addCandidateToForegroundStack(event, hwnd);
+				final WindowInfo windowInfo = new WindowInfo(hwnd);
+				if (windowInfo.isRealWindow()) {
+					for (final WindowEventResponse response : WindowEventResponse.values()) {
+						if (event.longValue() == response.mEventConstant) {
+							response.invoke(mWinEventAgent, windowInfo);
+						}
+					}
+				}
 			}
 		}
 	}
 
-	/**
-	 * Called by WinEventProcCallback when foreground window changes to add it to the foreground window stack,
-	 * if it's valid. Also called on startup.
-	 * @param event Should be WinUserEx.EVENT_SYSTEM_FOREGROUND
-	 * @param hWnd The hWnd that has come to the foreground
-	 * @return true if isRealWindow was true, otherwise false
-	 */
-	private boolean addCandidateToForegroundStack(final DWORD event, final HWND hWnd) {
-		final WindowInfo windowInfo = new WindowInfo(hWnd);
-		final boolean isRealWindow = windowInfo.isRealWindow();
-		if (isRealWindow)
-			WindowEventResponse.invoke(event, this, windowInfo);
-		return isRealWindow;
+	@FunctionalInterface
+	interface IWindowEventResponse {
+		void invoke(WinEventAgent winEventAgent, WindowInfo newWindowInfo);
 	}
 
-	@SuppressWarnings("FeatureEnvy")
-	private enum WindowEventResponse {
-		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND) {
-			@Override
-			public void invoke(final WinEventAgent winEventAgent, final WindowInfo newWindowInfo) {
-				//log.info("Foreground window changed");
-				// If the new hWnd exists anywhere in the stack, remove it
-				for (int i = 0; i < winEventAgent.foregroundWindows.size(); i++) {
-					if (winEventAgent.foregroundWindows.get(i).getHWnd().equals(newWindowInfo.getHWnd())) {
-						winEventAgent.foregroundWindows.remove(i);
-						break;
-					}
-				}
-				// add the fresh hwnd to top of the stack
-				winEventAgent.foregroundWindows.push(newWindowInfo);
-				// callback for window title update
-				winEventAgent.runCallbacks(PAYLOAD_WINDOW_TITLE, newWindowInfo.getTitle());
-			}
-		},
-		EVENT_OBJECT_LOCATIONCHANGE(WinUserEx.EVENT_OBJECT_LOCATIONCHANGE) {
-			@Override
-			public void invoke(final WinEventAgent winEventAgent, final WindowInfo newWindowInfo) {
-				//log.info("A window location changed");
-			}
-		},
-		EVENT_OBJECT_NAMECHANGE(WinUserEx.EVENT_OBJECT_NAMECHANGE) {
-			@Override
-			public void invoke(final WinEventAgent winEventAgent, final WindowInfo newWindowInfo) {
-				// check if hWnd is the same as top of the stack (i.e. foreground), if not then ignore it
-				if (!winEventAgent.foregroundWindows.isEmpty() &&
-						winEventAgent.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
-					// get new title
-					final WindowInfo foregroundWindowInfo = winEventAgent.foregroundWindows.peek();
-					final String newTitle = foregroundWindowInfo.getTitle(Cache.SKIP);
-					// update window title only if required
-					if (!newTitle.equals(foregroundWindowInfo.getTitle())) {
-						foregroundWindowInfo.setTitle(newTitle);
-						winEventAgent.runCallbacks(PAYLOAD_WINDOW_TITLE, newTitle);
-					}
+	@SuppressWarnings({"FeatureEnvy", "OverlyLongLambda"})
+	enum WindowEventResponse implements IWindowEventResponse {
+		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
+			log.info("Foreground window changed");
+			// If the new hWnd exists anywhere in the stack, remove it
+			for (int i = 0; i < winEventAgent.foregroundWindows.size(); i++) {
+				if (winEventAgent.foregroundWindows.get(i).getHWnd().equals(newWindowInfo.getHWnd())) {
+					winEventAgent.foregroundWindows.remove(i);
+					break;
 				}
 			}
-		};
+			// add the fresh hwnd to top of the stack
+			winEventAgent.foregroundWindows.push(newWindowInfo);
+			// callback for window title update
+			winEventAgent.runCallbacks(PAYLOAD_WINDOW_TITLE, newWindowInfo.getTitle());
+		}),
+		EVENT_OBJECT_LOCATIONCHANGE(WinUserEx.EVENT_OBJECT_LOCATIONCHANGE, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
+			log.info("A window location changed");
+		}),
+		EVENT_OBJECT_NAMECHANGE(WinUserEx.EVENT_OBJECT_NAMECHANGE, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
+			// check if hWnd is the same as top of the stack (i.e. foreground), if not then ignore it
+			if (!winEventAgent.foregroundWindows.isEmpty() &&
+					winEventAgent.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
+				// get new title
+				final WindowInfo foregroundWindowInfo = winEventAgent.foregroundWindows.peek();
+				final String newTitle = foregroundWindowInfo.getTitle(WindowInfo.Cache.SKIP);
+				// update window title only if required
+				if (!newTitle.equals(foregroundWindowInfo.getTitle())) {
+					foregroundWindowInfo.setTitle(newTitle);
+					winEventAgent.runCallbacks(PAYLOAD_WINDOW_TITLE, newTitle);
+				}
+			}
+		});
 
-		private final long mEventConstant;
+		private final int mEventConstant;
+		private final IWindowEventResponse mWindowEventResponse;
 
-		WindowEventResponse(final long eventConstant) {
+		WindowEventResponse(final int eventConstant, final IWindowEventResponse windowEventResponse) {
 			mEventConstant = eventConstant;
+			mWindowEventResponse = windowEventResponse;
 		}
 
-		@SuppressWarnings("StaticMethodOnlyUsedInOneClass")
-		static void invoke(final DWORD event, final WinEventAgent winEventAgent, final WindowInfo newWindowInfo) {
-			for (final WindowEventResponse response : values()) {
-				if (event.longValue() == response.mEventConstant) {
-					response.invoke(winEventAgent, newWindowInfo);
-				}
-			}
-			// some other event happened, ignore it
+		@Override
+		public void invoke(final WinEventAgent winEventAgent, final WindowInfo newWindowInfo) {
+			mWindowEventResponse.invoke(winEventAgent, newWindowInfo);
 		}
-
-		protected abstract void invoke(WinEventAgent winEventAgent, WindowInfo newWindowInfo);
 	}
 
 	//////////////////////////////////////////////////////////////
 	// Presenter-requested actions (i.e. user-invoked)
 	//////////////////////////////////////////////////////////////
 
-	public void minimizeForeground() {
+	public final void minimizeForeground() {
 		if (!foregroundWindows.isEmpty()) {
 			User32Ex.INSTANCE.ShowWindowAsync(foregroundWindows.peek().getHWnd(), WinUser.SW_MINIMIZE);
 		}

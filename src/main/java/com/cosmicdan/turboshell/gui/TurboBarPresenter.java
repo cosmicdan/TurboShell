@@ -158,41 +158,42 @@ public class TurboBarPresenter implements Presenter {
 			if (WM_USER_APPBAR_CALLBACK == uMsg) {
 				//log.info("Invoke appbar callback...");
 				//log.info(hWnd + "; " + uMsg + "; " + wParam.intValue() + "; " + lParam.intValue());
-				AppbarCallback.invoke(wParam, lParam);
+				for (final AppbarCallback callback : AppbarCallback.values()) {
+					if (wParam.intValue() == callback.mAppbarCallbackConstant) {
+						callback.invoke(lParam);
+					}
+				}
 			}
-
 			// pass it on...
 			return User32Ex.INSTANCE.CallWindowProc(mTurboBarWinProcBase.toPointer(), mTurboBarHWnd, uMsg, wParam, lParam);
 		}
 	}
 
+	@FunctionalInterface
+	interface IAppbarCallback {
+		void invoke(final LPARAM lParam);
+	}
+
 	@SuppressWarnings("Singleton")
-	private enum AppbarCallback {
-		ABN_FULLSCREENAPP(ShellAPIEx.ABN_FULLSCREENAPP) {
-			@Override
-			public void invoke(final LPARAM lParam) {
-				final boolean fullscreenEntered = (1 == lParam.intValue());
-				log.info("Fullscreen entered: {}", fullscreenEntered);
-				// TODO: Ping the WinEventAgent model with fullscreenChange flag so it can react accordingly
-			}
-		};
+	private enum AppbarCallback implements IAppbarCallback {
+		ABN_FULLSCREENAPP(ShellAPIEx.ABN_FULLSCREENAPP, (LPARAM lParam) -> {
+			final boolean fullscreenEntered = (1 == lParam.intValue());
+			log.info("Fullscreen entered: {}", fullscreenEntered);
+			// TODO: Ping the WinEventAgent model with fullscreenChange flag so it can react accordingly. Exclude desktop though!
+		});
 
-		private final int mAppbarCallbackConst;
+		private final int mAppbarCallbackConstant;
+		private final IAppbarCallback mAppBarCallback;
 
-		AppbarCallback(final int appbarCallbackConst) {
-			mAppbarCallbackConst = appbarCallbackConst;
+		AppbarCallback(final int appbarCallbackConstant, final IAppbarCallback appBarCallback) {
+			mAppbarCallbackConstant = appbarCallbackConstant;
+			mAppBarCallback = appBarCallback;
 		}
 
-		static void invoke(final WPARAM wParam, final LPARAM lParam) {
-			for (final AppbarCallback callback : values()) {
-				if (wParam.intValue() == callback.mAppbarCallbackConst) {
-					callback.invoke(lParam);
-				}
-			}
-			// some other event happened, ignore it
+		@Override
+		public void invoke(final LPARAM lParam) {
+			mAppBarCallback.invoke(lParam);
 		}
-
-		abstract void invoke(LPARAM lParam);
 	}
 
 
@@ -235,6 +236,7 @@ public class TurboBarPresenter implements Presenter {
 	}
 	*/
 
+	@SuppressWarnings("NonFinalStaticVariableUsedInClassInitialization")
 	enum SysBtnAction implements ViewAction {
 		MINIMIZE((Presenter presenter, Event event) -> {
 			WINEVENT_AGENT.minimizeForeground();
