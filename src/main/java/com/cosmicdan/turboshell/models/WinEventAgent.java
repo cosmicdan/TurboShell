@@ -2,6 +2,7 @@ package com.cosmicdan.turboshell.models;
 
 import com.cosmicdan.turboshell.models.data.SizedStack;
 import com.cosmicdan.turboshell.models.data.WindowInfo;
+import com.cosmicdan.turboshell.models.data.WindowInfo.Cache;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinUserEx;
 import com.sun.jna.platform.win32.User32;
@@ -20,9 +21,9 @@ import lombok.extern.log4j.Log4j2;
  * Presenter. Callbacks are processed in its own thread.
  * @author Daniel 'CosmicDan' Connolly
  */
-@SuppressWarnings("CyclicClassDependency")
+@SuppressWarnings({"CyclicClassDependency", "Singleton"})
 @Log4j2
-public class WinEventAgent extends AgentModel {
+public final class WinEventAgent extends AgentModel {
 	public static final WinEventAgent INSTANCE = new WinEventAgent();
 
 	// Callback ID's
@@ -36,9 +37,11 @@ public class WinEventAgent extends AgentModel {
 	private HANDLE hookNameChange = null;
 	private HANDLE hookForegroundChange = null;
 
+	private WinEventAgent() {}
+
 	@SuppressWarnings("FeatureEnvy")
 	@Override
-	protected final void serviceStart() {
+	protected void serviceStart() {
 		log.info("Starting...");
 		final WinEventProc callback = new WinEventProcCallback(this);
 
@@ -85,7 +88,7 @@ public class WinEventAgent extends AgentModel {
 	}
 
 	@Override
-	protected final void serviceStop() {
+	protected void serviceStop() {
 		User32.INSTANCE.UnhookWinEvent(hookLocationChange);
 		User32.INSTANCE.UnhookWinEvent(hookNameChange);
 		User32.INSTANCE.UnhookWinEvent(hookForegroundChange);
@@ -134,7 +137,7 @@ public class WinEventAgent extends AgentModel {
 	/**
 	 * WinEventProcCallback (window event hooks) response logic
 	 */
-	@SuppressWarnings({"FeatureEnvy", "OverlyLongLambda"})
+	@SuppressWarnings("OverlyLongLambda")
 	enum WindowEventResponse implements IWindowEventResponse {
 		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
 			log.info("Foreground window changed");
@@ -160,7 +163,7 @@ public class WinEventAgent extends AgentModel {
 					winEventAgent.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
 				// get new title
 				final WindowInfo foregroundWindowInfo = winEventAgent.foregroundWindows.peek();
-				final String newTitle = foregroundWindowInfo.getTitle(WindowInfo.Cache.SKIP);
+				final String newTitle = foregroundWindowInfo.getTitle(Cache.SKIP);
 				// update window title only if required
 				if (!newTitle.equals(foregroundWindowInfo.getTitle())) {
 					foregroundWindowInfo.setTitle(newTitle);
@@ -197,7 +200,7 @@ public class WinEventAgent extends AgentModel {
 	 * Only peeks at the foregroundWindows stack - the callback will update the stack via WindowEventResponse if/when the foreground
 	 * window changes as a result.
 	 */
-	public final void minimizeForeground() {
+	public void minimizeForeground() {
 		if (!foregroundWindows.isEmpty()) {
 			User32Ex.INSTANCE.ShowWindowAsync(foregroundWindows.peek().getHWnd(), WinUser.SW_MINIMIZE);
 		}

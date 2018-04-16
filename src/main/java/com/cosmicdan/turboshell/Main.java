@@ -23,6 +23,7 @@ public final class Main {
 		appThread.start();
 	}
 
+	@SuppressWarnings("PublicInnerClass")
 	public static class App extends Application {
 		public App() {}
 

@@ -13,11 +13,11 @@ import javafx.scene.layout.Region;
  * Main factory for creating TurboBar controls
  * @author Daniel 'CosmicDan' Connolly
  */
-public class TurboBarControlFactory {
+class TurboBarControlFactory {
 	private final int mTurboBarHeight;
 	private final Class<?> mSourceClass;
 
-	public TurboBarControlFactory(final Class<?> sourceClass, final int turboBarHeight) {
+	TurboBarControlFactory(final Class<?> sourceClass, final int turboBarHeight) {
 		mTurboBarHeight = turboBarHeight;
 		mSourceClass = sourceClass;
 	}

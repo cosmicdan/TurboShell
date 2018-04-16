@@ -2,7 +2,6 @@ package com.cosmicdan.turboshell.gui;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import lombok.extern.log4j.Log4j2;
 
 import java.io.File;

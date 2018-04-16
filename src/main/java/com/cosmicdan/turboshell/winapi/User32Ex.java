@@ -6,7 +6,7 @@ import com.sun.jna.NativeLibrary;
 import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.BaseTSD.LONG_PTR;
 import com.sun.jna.platform.win32.User32;
-import com.sun.jna.platform.win32.WinDef;
+import com.sun.jna.platform.win32.WinDef.BOOL;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.LPARAM;
 import com.sun.jna.platform.win32.WinDef.LRESULT;
@@ -18,9 +18,10 @@ import lombok.extern.log4j.Log4j2;
 /**
  * Contains User32 methods as a direct mapping instead of JNA's default interface mapping for performance
  */
-@SuppressWarnings({"UnusedReturnValue", "MethodWithTooManyParameters", "BooleanMethodNameMustStartWithQuestion", "NativeMethod"})
+@SuppressWarnings({"UnusedReturnValue", "MethodWithTooManyParameters", "BooleanMethodNameMustStartWithQuestion", "NativeMethod",
+		"Singleton"})
 @Log4j2
-public class User32Ex {
+public final class User32Ex {
 	public static final User32Ex INSTANCE;
 
 	static {
@@ -29,42 +30,41 @@ public class User32Ex {
 		Native.register(user32);
 	}
 
-	public User32Ex() {
-	}
+	private User32Ex() {}
 
 	// generic window stuff
 	/** See {@link User32#FindWindow} */
-	public final native HWND FindWindow(String lpClassName, String lpWindowName);
+	public native HWND FindWindow(String lpClassName, String lpWindowName);
 	/** See {@link User32#SetWindowLongPtr} */
-	public final native Pointer SetWindowLongPtr(HWND hWnd, int nIndex, Pointer dwNewLongPtr);
+	public native Pointer SetWindowLongPtr(HWND hWnd, int nIndex, Pointer dwNewLongPtr);
 	/** See {@link User32#GetWindowLongPtr} */
-	public final native LONG_PTR GetWindowLongPtr(HWND hWnd, int nIndex);
+	public native LONG_PTR GetWindowLongPtr(HWND hWnd, int nIndex);
 	/** SetWindowLongPtr variant specifically for setting window callbacks. See {@link User32#SetWindowLongPtr} */
-	public final native LONG_PTR SetWindowLongPtr(HWND hWnd, int nIndex, Callback wndProc);
+	public native LONG_PTR SetWindowLongPtr(HWND hWnd, int nIndex, Callback wndProc);
 	/** See {@link User32#SetWindowPos} */
-	public final native boolean SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int x, int y, int cx, int cy, int uFlags);
+	public native boolean SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int x, int y, int cx, int cy, int uFlags);
 	/** See {@link User32#IsWindowVisible} */
-	public final native boolean IsWindowVisible(HWND hWnd);
+	public native boolean IsWindowVisible(HWND hWnd);
 	/** See {@link User32#GetAncestor} */
-	public final native HWND GetAncestor(HWND hwnd, int gaFlags);
+	public native HWND GetAncestor(HWND hwnd, int gaFlags);
 	/** See {@link User32#GetWindow} */
-	public final native HWND GetWindow(HWND hWnd, int uCmd);
+	public native HWND GetWindow(HWND hWnd, int uCmd);
 	/** Sets the show state of a window without waiting for the operation to complete. */
-	public final native WinDef.BOOL ShowWindowAsync(HWND hWnd, int nCmdShow);
+	public native BOOL ShowWindowAsync(HWND hWnd, int nCmdShow);
 
 	// Callback/Window message related stuff
 	/** See {@link User32#GetMessage} */
-	public final native int GetMessage(MSG lpMsg, HWND hWnd, int wMsgFilterMin, int wMsgFilterMax);
+	public native int GetMessage(MSG lpMsg, HWND hWnd, int wMsgFilterMin, int wMsgFilterMax);
 	/** See {@link User32#TranslateMessage} */
-	public final native boolean TranslateMessage(MSG lpMsg);
+	public native boolean TranslateMessage(MSG lpMsg);
 	/** See {@link User32#DispatchMessage} */
-	public final native LRESULT DispatchMessage(MSG lpMsg);
+	public native LRESULT DispatchMessage(MSG lpMsg);
 
 	// For getting window titles
 	/** See {@link User32#GetWindowTextLength} */
-	public final native int GetWindowTextLength(HWND hWnd);
+	public native int GetWindowTextLength(HWND hWnd);
 	/** See {@link User32#GetWindowText} */
-	public final native int GetWindowText(HWND hWnd, char[] lpString, int nMaxCount);
+	public native int GetWindowText(HWND hWnd, char[] lpString, int nMaxCount);
 
 
 
@@ -85,6 +85,6 @@ public class User32Ex {
 	 * @see <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms633571(v=vs.85).aspx">CallWindowProc on
 	 * MSDN</a>
 	 */
-	public final native LRESULT CallWindowProc(Pointer proc, HWND hWnd, int uMsg, WPARAM wParam, LPARAM lParam);
+	public native LRESULT CallWindowProc(Pointer proc, HWND hWnd, int uMsg, WPARAM wParam, LPARAM lParam);
 
 }

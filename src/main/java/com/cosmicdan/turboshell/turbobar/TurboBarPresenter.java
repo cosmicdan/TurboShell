@@ -42,21 +42,31 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	private static final int turboBarFlags = WinUser.SWP_NOMOVE | WinUser.SWP_NOSIZE | WinUser.SWP_NOACTIVATE;
 	private static final int WM_USER_APPBAR_CALLBACK = WinUser.WM_USER + 808;
 
-	private static HWND turboBarHWnd = null;
-	private static ITurboBarView turboBarView = null;
+	private HWND turboBarHWnd = null;
+	private ITurboBarView turboBarView = null;
 
 	// all callbacks as class fields to avoid GC
 	private APPBARDATA appBarData = null;
 	private TurboBarWinProcCallback winProcCallback = null;
 
 	// cached values to save unnecessary WinAPI calls
-	private static boolean mIsTopmost = true;
+	private boolean mIsTopmost = true;
 
 	public TurboBarPresenter() {
 	}
 
-	@SuppressWarnings("ReturnOfThis")
-	public final TurboBarPresenter setup(final ITurboBarView view) {
+	@Override
+	public final HWND getTurboBarHWnd() {
+		return turboBarHWnd;
+	}
+
+	@Override
+	public final ITurboBarView getTurboBarView() {
+		return turboBarView;
+	}
+
+	@SuppressWarnings({"ReturnOfThis", "FeatureEnvy"})
+	public final ITurboBarPresenter setup(final ITurboBarView view) {
 		// gather data for building the initial TurboBar view...
 		final int turboBarHeight = TurboShellConfig.getTurboBarHeight();
 		final int[] workAreaXAndWidth = WindowsEnvironment.getWorkAreaXAndWidth();
@@ -129,7 +139,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		}
 		// ...and its callback
 		final LONG_PTR turboBarWinProcBase = User32Ex.INSTANCE.GetWindowLongPtr(turboBarHWnd, WinUser.GWL_WNDPROC);
-		winProcCallback = new TurboBarWinProcCallback(turboBarWinProcBase, turboBarHWnd);
+		winProcCallback = new TurboBarWinProcCallback(turboBarWinProcBase, this);
 		final LONG_PTR appBarCallbackResult = User32Ex.INSTANCE.SetWindowLongPtr(
 				turboBarHWnd, WinUser.GWL_WNDPROC, winProcCallback);
 		if (0 == appBarCallbackResult.longValue()) {
@@ -143,7 +153,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	 * @param initialTopHwnd The initial foreground hWnd that was retrieved on TurboShell startup, so it can be re-activated after
 	 *                       TurboShell steals focus
 	 */
-	private void setupModelsAndObservers(HWND initialTopHwnd) {
+	private static void setupModelsAndObservers(final HWND initialTopHwnd) {
 		WinEventAgent.INSTANCE.setInitialTopHwnd(initialTopHwnd);
 		WinEventAgent.INSTANCE.registerCallback(
 				WinEventAgent.PAYLOAD_WINDOW_TITLE,
@@ -162,11 +172,11 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	private static class TurboBarWinProcCallback implements WindowProc {
 		// Store the original window procedure for chain-calling it
 		private final LONG_PTR mTurboBarWinProcBase;
-		private final HWND mTurboBarHWnd;
+		private final ITurboBarPresenter mTurboBarPresenter;
 
-		TurboBarWinProcCallback(final LONG_PTR turboBarWinProcBase, final HWND turboBarHWnd) {
+		TurboBarWinProcCallback(final LONG_PTR turboBarWinProcBase, final ITurboBarPresenter turboBarPresenter) {
 			mTurboBarWinProcBase = turboBarWinProcBase;
-			mTurboBarHWnd = turboBarHWnd;
+			mTurboBarPresenter = turboBarPresenter;
 		}
 
 		@Override
@@ -176,12 +186,12 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 				//log.info(hWnd + "; " + uMsg + "; " + wParam.intValue() + "; " + lParam.intValue());
 				for (final AppbarCallback callback : AppbarCallback.values()) {
 					if (wParam.intValue() == callback.mAppbarCallbackConstant) {
-						callback.invoke(lParam);
+						callback.invoke(mTurboBarPresenter, lParam);
 					}
 				}
 			}
 			// pass it on...
-			return User32Ex.INSTANCE.CallWindowProc(mTurboBarWinProcBase.toPointer(), mTurboBarHWnd, uMsg, wParam, lParam);
+			return User32Ex.INSTANCE.CallWindowProc(mTurboBarWinProcBase.toPointer(), mTurboBarPresenter.getTurboBarHWnd(), uMsg, wParam, lParam);
 		}
 	}
 
@@ -190,11 +200,11 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	 */
 	@SuppressWarnings("Singleton")
 	private enum AppbarCallback implements IAppbarCallback {
-		ABN_FULLSCREENAPP(ShellAPIEx.ABN_FULLSCREENAPP, (LPARAM lParam) -> {
+		ABN_FULLSCREENAPP(ShellAPIEx.ABN_FULLSCREENAPP, (ITurboBarPresenter turboBarPresenter, LPARAM lParam) -> {
 			final boolean fullscreenEntered = (1 == lParam.intValue());
 			log.info("Fullscreen entered: {}", fullscreenEntered);
 			// TODO: Ping the WinEventAgent model with fullscreenChange flag so it can react accordingly. Exclude desktop though!
-			setTopmost(!fullscreenEntered);
+			turboBarPresenter.setTopmost(!fullscreenEntered);
 		});
 
 		private final int mAppbarCallbackConstant;
@@ -206,14 +216,14 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		}
 
 		@Override
-		public void invoke(final LPARAM lParam) {
-			mAppBarCallback.invoke(lParam);
+		public void invoke(final ITurboBarPresenter turboBarPresenter, final LPARAM lParam) {
+			mAppBarCallback.invoke(turboBarPresenter, lParam);
 		}
 	}
 
 	@FunctionalInterface
 	interface IAppbarCallback {
-		void invoke(final LPARAM lParam);
+		void invoke(final ITurboBarPresenter turboBarPresenter, final LPARAM lParam);
 	}
 
 
@@ -229,11 +239,8 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		log.info("Got window title update: {}", windowTitle);
 	}
 
-	/**
-	 * Called from AppBar
-	 * @param topmost
-	 */
-	private static void setTopmost(final boolean topmost) {
+	@Override
+	public final void setTopmost(final boolean topmost) {
 		if (topmost == mIsTopmost) // cache check to save API calls
 			return;
 		User32Ex.INSTANCE.SetWindowPos(
@@ -253,7 +260,6 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	/**
 	 * SysButton actions
 	 */
-	@SuppressWarnings("NonFinalStaticVariableUsedInClassInitialization")
 	enum SysBtnAction implements ViewAction {
 		MINIMIZE((ITurboBarPresenter presenter, Event event) -> {
 			WinEventAgent.INSTANCE.minimizeForeground();
