@@ -1,10 +1,12 @@
 package com.cosmicdan.turboshell.turbobar;
 
+import com.cosmicdan.turboshell.models.AgentModel;
 import com.cosmicdan.turboshell.models.TurboShellConfig;
 import com.cosmicdan.turboshell.models.WinEventAgent;
 import com.cosmicdan.turboshell.models.WindowsEnvironment;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
+import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnResizeState;
 import com.cosmicdan.turboshell.winapi.ShellAPIEx;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinApiException;
@@ -153,12 +155,12 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	 * @param initialTopHwnd The initial foreground hWnd that was retrieved on TurboShell startup, so it can be re-activated after
 	 *                       TurboShell steals focus
 	 */
-	private static void setupModelsAndObservers(final HWND initialTopHwnd) {
+	private void setupModelsAndObservers(final HWND initialTopHwnd) {
 		WinEventAgent.INSTANCE.setInitialTopHwnd(initialTopHwnd);
-		WinEventAgent.INSTANCE.registerCallback(
-				WinEventAgent.PAYLOAD_WINDOW_TITLE,
-				(Object data) -> updateWindowTitle((String)data)
-		);
+		WinEventAgent.INSTANCE.registerCallback(WinEventAgent.PAYLOAD_WINDOW_TITLE,
+				(Object[] data) -> updateWindowTitle((String)data[0]));
+		WinEventAgent.INSTANCE.registerCallback(WinEventAgent.PAYLOAD_WINDOW_SIZE_CHANGE,
+				(Object[] data) -> updateWindowSize((boolean)data[0], (boolean)data[1]));
 		WinEventAgent.INSTANCE.start();
 	}
 
@@ -202,8 +204,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	private enum AppbarCallback implements IAppbarCallback {
 		ABN_FULLSCREENAPP(ShellAPIEx.ABN_FULLSCREENAPP, (ITurboBarPresenter turboBarPresenter, LPARAM lParam) -> {
 			final boolean fullscreenEntered = (1 == lParam.intValue());
-			log.info("Fullscreen entered: {}", fullscreenEntered);
-			// TODO: Ping the WinEventAgent model with fullscreenChange flag so it can react accordingly. Exclude desktop though!
+			//log.info("Fullscreen entered: {}", fullscreenEntered);
 			turboBarPresenter.setTopmost(!fullscreenEntered);
 		});
 
@@ -235,8 +236,17 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	 * Registered with WinEventAgent when window title changes are detected. Forwards it onto the relevant view(s).
 	 * @param windowTitle The new window title, as returned by WinEventAgent
 	 */
-	private static void updateWindowTitle(final String windowTitle) {
+	private void updateWindowTitle(final String windowTitle) {
 		log.info("Got window title update: {}", windowTitle);
+	}
+
+	private void updateWindowSize(final boolean isMaximized, boolean canMaximize) {
+		//log.info("Got window size update: isMaximized={}; canMaximize={}", isMaximized, canMaximize);
+		SysBtnResizeState newState = SysBtnResizeState.DISABLED;
+		if (canMaximize) {
+			newState = isMaximized ? SysBtnResizeState.RESTORE : SysBtnResizeState.MAXIMIZE;
+		}
+		turboBarView.updateSysBtnResize(newState);
 	}
 
 	@Override
@@ -265,7 +275,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 			WinEventAgent.INSTANCE.minimizeForeground();
 		}),
 		RESIZE((ITurboBarPresenter presenter, Event event) -> {
-
+			WinEventAgent.INSTANCE.resizeForeground();
 		}),
 		CLOSE((ITurboBarPresenter presenter, Event event) -> {
 

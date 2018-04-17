@@ -51,7 +51,7 @@ public abstract class AgentModel implements Runnable {
 	@SuppressWarnings("PublicInnerClass")
 	@FunctionalInterface
 	public interface PayloadCallback {
-		void run(Object data);
+		void run(Object[] data);
 	}
 
 	private static final class CallbackInfo {
@@ -63,7 +63,7 @@ public abstract class AgentModel implements Runnable {
 			mCallback = callback;
 		}
 
-		void run(final Object data) {
+		void run(final Object[] data) {
 			mCallback.run(data);
 		}
 	}
@@ -80,7 +80,7 @@ public abstract class AgentModel implements Runnable {
 	}
 
 	@SuppressWarnings("MethodWithMultipleLoops")
-	final void runCallbacks(final int payloadId, final Object data) {
+	final void runCallbacks(final int payloadId, final Object... data) {
 		final Collection<CallbackInfo> callbacksCopy;
 		synchronized(callbackLock) {
 			callbacksCopy = new HashSet<>(mCallbacks.size());

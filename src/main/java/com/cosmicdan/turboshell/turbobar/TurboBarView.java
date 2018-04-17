@@ -1,8 +1,11 @@
 package com.cosmicdan.turboshell.turbobar;
 
+import com.cosmicdan.turboshell.gui.AdaptiveButton;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
 import com.cosmicdan.turboshell.turbobar.TurboBarPresenter.SysBtnAction;
+import javafx.application.Platform;
+import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -18,10 +21,15 @@ import java.util.Collection;
  * @author Daniel 'CosmicDan' Connolly
  */
 public class TurboBarView implements ITurboBarView {
+	public enum SysBtnResizeState {MAXIMIZE, RESTORE, DISABLED};
+
 	private final Stage mPrimaryStage;
 	private final HBox pane;
 
 	private ITurboBarPresenter mPresenter = null;
+
+	private AdaptiveButton sysBtnMinimize = null;
+	private AdaptiveButton sysBtnResize = null;
 
 	public TurboBarView(final Stage primaryStage) {
 		mPrimaryStage = primaryStage;
@@ -66,13 +74,33 @@ public class TurboBarView implements ITurboBarView {
 		coreControls.add(TurboBarControlFactory.newCenterPaddingRegion());
 
 		// SysButton - Minimize
-		coreControls.add(factory.newGenericButton(
+		sysBtnMinimize = factory.newGenericButton(
 				"TurboBar_sysbtn_minimize.png",
 				MouseEvent.MOUSE_CLICKED,
-				(MouseEvent event) -> SysBtnAction.MINIMIZE.invoke(mPresenter, event))
-		);
+				(MouseEvent event) -> SysBtnAction.MINIMIZE.invoke(mPresenter, event));
+		coreControls.add(sysBtnMinimize);
+		// SysButton - Restore/Maximize
+		sysBtnResize = factory.newGenericButton(
+				new String[] {"TurboBar_sysbtn_resize_maximize.png", "TurboBar_sysbtn_resize_restore.png"},
+				MouseEvent.MOUSE_CLICKED,
+				(MouseEvent event) -> SysBtnAction.RESIZE.invoke(mPresenter, event));
+		coreControls.add(sysBtnResize);
 
 		// All done, now actually add them to the stage
 		pane.getChildren().addAll(coreControls);
+	}
+
+	@Override
+	public void updateSysBtnResize(final SysBtnResizeState toState) {
+		Platform.runLater(() -> {
+			if (SysBtnResizeState.RESTORE == toState) {
+				sysBtnResize.setImageViewIndex(1);
+			} else {
+				// set it to "maximuze" graphic by default
+				sysBtnResize.setImageViewIndex(0);
+			}
+			// set disabled/enabled
+			sysBtnResize.setDisable(SysBtnResizeState.DISABLED == toState);
+		});
 	}
 }

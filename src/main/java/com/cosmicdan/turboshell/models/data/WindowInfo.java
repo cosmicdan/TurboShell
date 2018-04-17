@@ -82,15 +82,23 @@ public class WindowInfo {
 	// https://stackoverflow.com/questions/2262726/determining-if-a-window-has-a-taskbar-button
 
 	public final boolean canResize() {
-		return WinUser.WS_SIZEBOX == (styleFlags & WinUser.WS_SIZEBOX);
+		return hasStyle(WinUser.WS_SIZEBOX);
 	}
 
 	public final boolean hasResizeButton() {
-		return WinUser.WS_MAXIMIZEBOX == (styleFlags & WinUser.WS_MAXIMIZEBOX);
+		return hasStyle(WinUser.WS_MAXIMIZEBOX);
 	}
 
 	public final boolean hasMinimizeButton() {
-		return WinUser.WS_MINIMIZEBOX == (styleFlags & WinUser.WS_MINIMIZEBOX);
+		return hasStyle(WinUser.WS_MINIMIZEBOX);
+	}
+
+	public final boolean isMaximized() {
+		return hasStyle(WinUser.WS_MAXIMIZE);
+	}
+
+	public final boolean canMaximize() {
+		return (canResize() && hasResizeButton());
 	}
 
 	private boolean isTopWindow() {

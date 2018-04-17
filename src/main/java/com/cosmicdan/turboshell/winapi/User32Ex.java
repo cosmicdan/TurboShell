@@ -6,10 +6,12 @@ import com.sun.jna.NativeLibrary;
 import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.BaseTSD.LONG_PTR;
 import com.sun.jna.platform.win32.User32;
+import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinDef.BOOL;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.LPARAM;
 import com.sun.jna.platform.win32.WinDef.LRESULT;
+import com.sun.jna.platform.win32.WinDef.RECT;
 import com.sun.jna.platform.win32.WinDef.WPARAM;
 import com.sun.jna.platform.win32.WinUser.MSG;
 import com.sun.jna.win32.W32APIOptions;
@@ -51,6 +53,9 @@ public final class User32Ex {
 	public native HWND GetWindow(HWND hWnd, int uCmd);
 	/** Sets the show state of a window without waiting for the operation to complete. */
 	public native BOOL ShowWindowAsync(HWND hWnd, int nCmdShow);
+	/** See {@link User32#GetWindowRect} */
+	public native boolean GetWindowRect(HWND hWnd, RECT rect);
+
 
 	// Callback/Window message related stuff
 	/** See {@link User32#GetMessage} */

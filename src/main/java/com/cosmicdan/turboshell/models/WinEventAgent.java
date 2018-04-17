@@ -28,6 +28,7 @@ public final class WinEventAgent extends AgentModel {
 
 	// Callback ID's
 	public static final int PAYLOAD_WINDOW_TITLE = 0;
+	public static final int PAYLOAD_WINDOW_SIZE_CHANGE = 1;
 
 	private final SizedStack<WindowInfo> foregroundWindows = new SizedStack<>(10);
 	@Setter	private HWND mInitialTopHwnd;
@@ -141,21 +142,16 @@ public final class WinEventAgent extends AgentModel {
 	enum WindowEventResponse implements IWindowEventResponse {
 		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
 			log.info("Foreground window changed");
-			// If the new hWnd exists anywhere in the stack, remove it
-			for (int i = 0; i < winEventAgent.foregroundWindows.size(); i++) {
-				if (winEventAgent.foregroundWindows.get(i).getHWnd().equals(newWindowInfo.getHWnd())) {
-					winEventAgent.foregroundWindows.remove(i);
-					break;
-				}
-			}
-			// add the fresh hwnd to top of the stack
-			winEventAgent.foregroundWindows.push(newWindowInfo);
-			// callback for window title update
+			addOrUpdateWindowStack(winEventAgent, newWindowInfo);
+			// run callbacks
 			winEventAgent.runCallbacks(PAYLOAD_WINDOW_TITLE, newWindowInfo.getTitle());
+			winEventAgent.runCallbacks(PAYLOAD_WINDOW_SIZE_CHANGE, newWindowInfo.isMaximized(), newWindowInfo.canResize());
 		}),
 		EVENT_OBJECT_LOCATIONCHANGE(WinUserEx.EVENT_OBJECT_LOCATIONCHANGE, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
-			log.info("A window location changed");
-			// TODO: Check if the top of the Window is above the TurboBar (like Discord does when you 'restore' it), if so nudge it down
+			//log.info("A window location changed");
+			addOrUpdateWindowStack(winEventAgent, newWindowInfo);
+			winEventAgent.runCallbacks(PAYLOAD_WINDOW_SIZE_CHANGE, newWindowInfo.isMaximized(), newWindowInfo.canResize());
+
 		}),
 		EVENT_OBJECT_NAMECHANGE(WinUserEx.EVENT_OBJECT_NAMECHANGE, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
 			// check if hWnd is the same as top of the stack (i.e. foreground), if not then ignore it
@@ -171,6 +167,18 @@ public final class WinEventAgent extends AgentModel {
 				}
 			}
 		});
+
+		private static void addOrUpdateWindowStack(WinEventAgent winEventAgent, WindowInfo newWindowInfo) {
+			// If this hWnd exists anywhere in the stack, remove it first
+			for (int i = 0; i < winEventAgent.foregroundWindows.size(); i++) {
+				if (winEventAgent.foregroundWindows.get(i).getHWnd().equals(newWindowInfo.getHWnd())) {
+					winEventAgent.foregroundWindows.remove(i);
+					break;
+				}
+			}
+			// add the fresh hwnd to top of the stack
+			winEventAgent.foregroundWindows.push(newWindowInfo);
+		}
 
 		private final int mEventConstant;
 		private final IWindowEventResponse mWindowEventResponse;
@@ -197,8 +205,6 @@ public final class WinEventAgent extends AgentModel {
 
 	/**
 	 * Perform minimize on the foreground window.
-	 * Only peeks at the foregroundWindows stack - the callback will update the stack via WindowEventResponse if/when the foreground
-	 * window changes as a result.
 	 */
 	public void minimizeForeground() {
 		if (!foregroundWindows.isEmpty()) {
@@ -206,7 +212,14 @@ public final class WinEventAgent extends AgentModel {
 		}
 	}
 
-
-
-
+	/**
+	 * Perform resize (restore/maximize) on the foreground window.
+	 */
+	public void resizeForeground() {
+		if (!foregroundWindows.isEmpty()) {
+			final WindowInfo foregroundWindow = foregroundWindows.peek();
+			User32Ex.INSTANCE.ShowWindowAsync(foregroundWindow.getHWnd(),
+					foregroundWindow.isMaximized() ? WinUser.SW_RESTORE : WinUser.SW_MAXIMIZE);
+		}
+	}
 }

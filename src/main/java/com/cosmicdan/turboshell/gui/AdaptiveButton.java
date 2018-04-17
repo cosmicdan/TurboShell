@@ -15,11 +15,12 @@ import java.net.URL;
 @Log4j2
 public class AdaptiveButton extends Button {
 	protected enum AddTextPadding {LEFT, RIGHT, BOTH}
+	final ImageView[] mImageViews;
 
 	@SuppressWarnings("ObjectAllocationInLoop")
 	public AdaptiveButton(final Class<?> mSourceClass, final String text, final String[] imageResourcePaths) {
 		super(text);
-		final ImageView[] mImageViews = new ImageView[imageResourcePaths.length];
+		mImageViews = new ImageView[imageResourcePaths.length];
 		if (0 < mImageViews.length) {
 			for (int i = 0; i < mImageViews.length; i++) {
 				final URL imageUrl = mSourceClass.getResource(imageResourcePaths[i]);
@@ -44,6 +45,11 @@ public class AdaptiveButton extends Button {
 			newText += "  ";
 		setText(newText);
 	}
+
+	public final void setImageViewIndex(final int index) {
+		setGraphic(mImageViews[index]);
+	}
+
 	/*
 	public final void setClickAction(final Runnable runnable) {
 		addEventFilter(MouseEvent.MOUSE_CLICKED, (MouseEvent event) -> runnable.run());

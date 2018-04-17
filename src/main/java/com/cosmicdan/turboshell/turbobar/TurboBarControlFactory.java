@@ -32,7 +32,7 @@ class TurboBarControlFactory {
 	}
 
 	/**
-	 * Build a new transparent Button with only a single graphic
+	 * Build a new transparent Button with no text and a single graphic state
 	 */
 	public final <T extends Event> AdaptiveButton newGenericButton(final String imageResourcePath,
 																   final EventType<T> eventType,
@@ -40,6 +40,18 @@ class TurboBarControlFactory {
 		return newGenericButton("", new String[] {imageResourcePath}, eventType, eventHandler);
 	}
 
+	/**
+	 * Build a new transparent Button with no text and multiple graphic states
+	 */
+	public final <T extends Event> AdaptiveButton newGenericButton(final String[] imageResourcePaths,
+																   final EventType<T> eventType,
+																   final EventHandler<? super T> eventHandler) {
+		return newGenericButton("", imageResourcePaths, eventType, eventHandler);
+	}
+
+	/**
+	 * Build a new transparent Button with text and multiple graphic states
+	 */
 	private <T extends Event> AdaptiveButton newGenericButton(final String text,
 															  final String[] imageResourcePaths,
 															  final EventType<T> eventType,

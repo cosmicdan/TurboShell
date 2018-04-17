@@ -1,5 +1,6 @@
 package com.cosmicdan.turboshell.turbobar;
 
+import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnResizeState;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import javafx.event.Event;
 
@@ -14,6 +15,7 @@ public interface TurboBarContract {
 		void setPresenter(ITurboBarPresenter presenter);
 		void setup(int xPos, int width, int barHeight, String css, String windowName);
 		void refreshSize(final int xPos, final int width, final int barHeight);
+		void updateSysBtnResize(SysBtnResizeState toState);
 	}
 
 	@SuppressWarnings("CyclicClassDependency")
