@@ -1,9 +1,13 @@
 package com.cosmicdan.turboshell.turbobar;
 
+import com.cosmicdan.turboshell.models.AgentModel.PayloadCallback;
 import com.cosmicdan.turboshell.models.TurboShellConfig;
 import com.cosmicdan.turboshell.models.WinEventAgent;
 import com.cosmicdan.turboshell.models.WinEventAgent.KillForegroundHardness;
 import com.cosmicdan.turboshell.models.WindowsEnvironment;
+import com.cosmicdan.turboshell.models.data.WindowInfo.Flag;
+import com.cosmicdan.turboshell.models.payloads.WindowSysBtnUpdatePayload;
+import com.cosmicdan.turboshell.models.payloads.WindowTitleChangePayload;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
 import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnMinimizeState;
@@ -32,6 +36,7 @@ import javafx.event.Event;
 import lombok.extern.log4j.Log4j2;
 
 import java.net.URL;
+import java.util.EnumSet;
 
 /**
  * TurboBar presenter. Contains all the back-end logic for the View (updating and responding to it) as well as delegating between
@@ -63,10 +68,12 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		return turboBarHWnd;
 	}
 
-	//@Override
-	//public final ITurboBarView getTurboBarView() {
-	//	return turboBarView;
-	//}
+	/*
+	@Override
+	public final ITurboBarView getTurboBarView() {
+		return turboBarView;
+	}
+	*/
 
 	@SuppressWarnings({"ReturnOfThis", "FeatureEnvy"})
 	public final ITurboBarPresenter setup(final ITurboBarView view) {
@@ -159,10 +166,15 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	@SuppressWarnings("FeatureEnvy")
 	private void setupModelsAndObservers(final HWND initialTopHwnd) {
 		WinEventAgent.INSTANCE.setInitialTopHwnd(initialTopHwnd);
-		WinEventAgent.INSTANCE.registerCallback(WinEventAgent.PAYLOAD_WINDOW_TITLE,
-				(Object[] data) -> updateWindowTitle((String)data[0]));
-		WinEventAgent.INSTANCE.registerCallback(WinEventAgent.PAYLOAD_WINDOW_SYSBTN,
-				(Object[] data) -> updateWindowSize((boolean)data[0], (boolean)data[1], (boolean)data[2]));
+
+		// window title changes
+		WinEventAgent.INSTANCE.registerCallback(WindowTitleChangePayload.class,
+				(PayloadCallback<WindowTitleChangePayload>) this::updateWindowTitle);
+
+		// window sysbtn control updates
+		WinEventAgent.INSTANCE.registerCallback(WindowSysBtnUpdatePayload.class,
+				(PayloadCallback<WindowSysBtnUpdatePayload>) this::updateSysBtns);
+
 		WinEventAgent.INSTANCE.start();
 	}
 
@@ -234,23 +246,20 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	// Model/agent-sourced or locally-logic (e.g. reactions to environment changes)
 	//////////////////////////////////////////////////////////////
 
-	/**
-	 * Registered with WinEventAgent when window title changes are detected. Forwards it onto the relevant view(s).
-	 * @param windowTitle The new window title, as returned by WinEventAgent
-	 */
-	private void updateWindowTitle(final String windowTitle) {
-		log.info("Got window title update: {}", windowTitle);
+	private void updateWindowTitle(final WindowTitleChangePayload payload) {
+		log.info("Got window title update: {}", payload.getWindowTitle());
 	}
 
-	private void updateWindowSize(final boolean isMaximized, final boolean canMaximize, final boolean canMinimize) {
+	private void updateSysBtns(final WindowSysBtnUpdatePayload payload) {
+		final EnumSet<Flag> currentWindowFlags = payload.getFlags();
 		// check if window can be resized
 		SysBtnResizeState newState = SysBtnResizeState.DISABLED;
-		if (canMaximize) {
-			newState = isMaximized ? SysBtnResizeState.RESTORE : SysBtnResizeState.MAXIMIZE;
+		if (currentWindowFlags.contains(Flag.IS_MAXIMIZABLE)) {
+			newState = currentWindowFlags.contains(Flag.IS_MAXIMIZED) ? SysBtnResizeState.RESTORE : SysBtnResizeState.MAXIMIZE;
 		}
 		turboBarView.updateSysBtnResize(newState);
 		// check if window can be minimized
-		turboBarView.updateSysBtnMinimize(canMinimize ? SysBtnMinimizeState.ENABLED : SysBtnMinimizeState.DISABLED);
+		turboBarView.updateSysBtnMinimize(currentWindowFlags.contains(Flag.IS_MINIMIZABLE) ? SysBtnMinimizeState.ENABLED : SysBtnMinimizeState.DISABLED);
 	}
 
 	@Override

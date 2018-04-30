@@ -2,7 +2,8 @@ package com.cosmicdan.turboshell.models;
 
 import com.cosmicdan.turboshell.models.data.SizedStack;
 import com.cosmicdan.turboshell.models.data.WindowInfo;
-import com.cosmicdan.turboshell.models.data.WindowInfo.Cache;
+import com.cosmicdan.turboshell.models.payloads.WindowSysBtnUpdatePayload;
+import com.cosmicdan.turboshell.models.payloads.WindowTitleChangePayload;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinUserEx;
 import com.sun.jna.platform.win32.Kernel32;
@@ -30,11 +31,6 @@ public final class WinEventAgent extends AgentModel {
 	public static final WinEventAgent INSTANCE = new WinEventAgent();
 
 	public enum KillForegroundHardness{SOFT, HARD}
-
-	// Callback ID's
-	// TODO: Replace with objects
-	public static final int PAYLOAD_WINDOW_TITLE = 0;
-	public static final int PAYLOAD_WINDOW_SYSBTN = 1;
 
 	private final SizedStack<WindowInfo> foregroundWindows = new SizedStack<>(10);
 	@Setter	private HWND mInitialTopHwnd;
@@ -142,18 +138,16 @@ public final class WinEventAgent extends AgentModel {
 	 */
 	enum WindowEventResponse implements IWindowEventResponse {
 		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND, (WindowInfo newWindowInfo) -> {
-			log.info("Foreground window changed");
+			//log.info("Foreground window changed");
 			addOrUpdateWindowStack(newWindowInfo);
 			// run callbacks
-			INSTANCE.runCallbacks(PAYLOAD_WINDOW_TITLE, newWindowInfo.getTitle());
-			INSTANCE.runCallbacks(PAYLOAD_WINDOW_SYSBTN,
-					newWindowInfo.isMaximized(), newWindowInfo.canMaximize(), newWindowInfo.hasMinimizeButton());
+			INSTANCE.runCallbacks(new WindowTitleChangePayload(newWindowInfo.getTitle()));
+			INSTANCE.runCallbacks(new WindowSysBtnUpdatePayload(newWindowInfo.getFlags()));
 		}),
 		EVENT_OBJECT_LOCATIONCHANGE(WinUserEx.EVENT_OBJECT_LOCATIONCHANGE, (WindowInfo newWindowInfo) -> {
 			//log.info("A window location changed");
 			addOrUpdateWindowStack(newWindowInfo);
-			INSTANCE.runCallbacks(PAYLOAD_WINDOW_SYSBTN,
-					newWindowInfo.isMaximized(), newWindowInfo.canMaximize(), newWindowInfo.hasMinimizeButton());
+			INSTANCE.runCallbacks(new WindowSysBtnUpdatePayload(newWindowInfo.getFlags()));
 		}),
 		EVENT_OBJECT_NAMECHANGE(WinUserEx.EVENT_OBJECT_NAMECHANGE, (WindowInfo newWindowInfo) -> {
 			// check if hWnd is the same as top of the stack (i.e. foreground), if not then ignore it
@@ -161,8 +155,9 @@ public final class WinEventAgent extends AgentModel {
 					INSTANCE.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
 				// get new title
 				final WindowInfo foregroundWindowInfo = INSTANCE.foregroundWindows.peek();
-				if (foregroundWindowInfo.refreshTitle())
-					INSTANCE.runCallbacks(PAYLOAD_WINDOW_TITLE, foregroundWindowInfo.getTitle());
+				if (foregroundWindowInfo.refreshTitle()) {
+					INSTANCE.runCallbacks(new WindowTitleChangePayload(newWindowInfo.getTitle()));
+				}
 			}
 		});
 

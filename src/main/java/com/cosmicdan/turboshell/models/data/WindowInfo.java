@@ -6,6 +6,8 @@ import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinUser;
 import lombok.extern.log4j.Log4j2;
 
+import java.util.EnumSet;
+
 /**
  * A holder/wrapper for window styles, title name, and other interesting information
  * @author Daniel 'CosmicDan' Connolly
@@ -14,6 +16,12 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 public class WindowInfo {
 	public enum Cache {USE, SKIP}
+
+	public enum Flag {
+		IS_MAXIMIZED,
+		IS_MAXIMIZABLE,
+		IS_MINIMIZABLE
+	}
 
 	private final HWND mHWnd;
 	private final long styleFlags;
@@ -35,27 +43,27 @@ public class WindowInfo {
 		return getTitle(Cache.USE);
 	}
 
-	private final String getTitle(final Cache cache) {
+	private String getTitle(final Cache cache) {
 		// TODO: Get title of the owner/top window. Can be reproduced from Notepad++ "Reload" (modified file elsewhere) prompt
-		String windowTitle = "[No title]";
 		if ((null == mTitle) || (Cache.SKIP == cache)) {
 			// get the title for the new window
 			final int titleLength = User32Ex.INSTANCE.GetWindowTextLength(mHWnd) + 1;
 			final char[] title = new char[titleLength];
 			final int length = User32Ex.INSTANCE.GetWindowText(mHWnd, title, title.length);
+			String windowTitle = "[No title]";
 			if (0 < length)
 				windowTitle = new String(title);
 			// TODO: else set process name to title?
 			//log.info("Title refresh to '" + windowTitle + "'");
-			if (Cache.USE == cache)
+			if ((null == mTitle) || (Cache.USE == cache))
 				mTitle = windowTitle;
 		}
-		return windowTitle;
+		return mTitle;
 	}
 
 	public final boolean refreshTitle() {
 		boolean didUpdate = false;
-		String newTitle = getTitle(Cache.SKIP);
+		final String newTitle = getTitle(Cache.SKIP);
 		if (!newTitle.equals(getTitle())) {
 			mTitle = newTitle;
 			didUpdate = true;
@@ -95,15 +103,26 @@ public class WindowInfo {
 		return hasStyle(WinUser.WS_MAXIMIZEBOX);
 	}
 
-	public final boolean hasMinimizeButton() {
-		return hasStyle(WinUser.WS_MINIMIZEBOX);
-	}
-
 	public final boolean isMaximized() {
 		return hasStyle(WinUser.WS_MAXIMIZE);
 	}
 
-	public final boolean canMaximize() {
+	public EnumSet<Flag> getFlags() {
+		final EnumSet<Flag> flags = EnumSet.noneOf(Flag.class);
+		if (isMaximized())
+			flags.add(Flag.IS_MAXIMIZED);
+		if (canMaximize())
+			flags.add(Flag.IS_MAXIMIZABLE);
+		if (hasMinimizeButton())
+			flags.add(Flag.IS_MINIMIZABLE);
+		return flags;
+	}
+
+	private boolean hasMinimizeButton() {
+		return hasStyle(WinUser.WS_MINIMIZEBOX);
+	}
+
+	private boolean canMaximize() {
 		return (canResize() && hasResizeButton());
 	}
 

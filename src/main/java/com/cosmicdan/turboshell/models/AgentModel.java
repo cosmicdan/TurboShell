@@ -1,5 +1,6 @@
 package com.cosmicdan.turboshell.models;
 
+import com.cosmicdan.turboshell.models.payloads.IPayload;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.Collection;
@@ -15,7 +16,7 @@ import java.util.Set;
 @Log4j2
 public abstract class AgentModel implements Runnable {
 	private final Object callbackLock = new Object();
-	private Set<CallbackInfo> mCallbacks = null;
+	private Set<CallbackReceiverEntry<IPayload>> mCallbacks = null;
 
 	AgentModel() {}
 
@@ -49,48 +50,51 @@ public abstract class AgentModel implements Runnable {
 	///////////////////
 
 	@FunctionalInterface
-	public interface PayloadCallback {
-		void run(Object[] data);
+	public interface PayloadCallback<T extends IPayload> {
+		void run(T payload);
 	}
 
-	private static final class CallbackInfo {
-		private final int mPayloadId;
-		private final PayloadCallback mCallback;
+	private static final class CallbackReceiverEntry<T extends IPayload> {
+		private final Class<? extends IPayload> mPayloadClass;
+		private final PayloadCallback<T> mCallback;
 
-		private CallbackInfo(final int payloadId, final PayloadCallback callback) {
-			mPayloadId = payloadId;
+		private CallbackReceiverEntry(final Class<T> payloadClass, final PayloadCallback<T> callback) {
+			mPayloadClass = payloadClass;
 			mCallback = callback;
 		}
 
-		void run(final Object[] data) {
-			mCallback.run(data);
+		void run(final T mPayload) {
+			mCallback.run(mPayload);
 		}
 	}
 
-	public final void registerCallback(final int payloadId, final PayloadCallback callback) {
+	@SuppressWarnings("unchecked")
+	public final void registerCallback(final Class<? extends IPayload> payloadClass, final PayloadCallback<? extends IPayload> callback) {
 		if (null == callback)
 			return;
 
 		synchronized(callbackLock) {
 			if (null == mCallbacks)
 				mCallbacks = new HashSet<>(1);
-			mCallbacks.add(new CallbackInfo(payloadId, callback));
+			mCallbacks.add(new CallbackReceiverEntry(payloadClass, callback));
 		}
 	}
 
 	@SuppressWarnings("MethodWithMultipleLoops")
-	final void runCallbacks(final int payloadId, final Object... data) {
-		final Collection<CallbackInfo> callbacksCopy;
+	final void runCallbacks(final IPayload payload) {
+		final Collection<CallbackReceiverEntry<IPayload>> callbacksCopy;
+		// first we copy the relevent payloads to a new hashmap since we don't want to run each callback with a thread lock held
 		synchronized(callbackLock) {
 			callbacksCopy = new HashSet<>(mCallbacks.size());
-			for (final CallbackInfo callback : mCallbacks) {
-				if (callback.mPayloadId == payloadId)
+			for (final CallbackReceiverEntry<IPayload> callback : mCallbacks) {
+				if (payload.isTypeOf(callback.mPayloadClass)) {
 					callbacksCopy.add(callback);
+				}
 			}
 		}
 
-		for (final CallbackInfo callback : callbacksCopy) {
-			callback.run(data);
+		for (final CallbackReceiverEntry<IPayload> callback : callbacksCopy) {
+			callback.run(payload);
 		}
 	}
 }
