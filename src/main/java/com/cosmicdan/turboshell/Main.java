@@ -12,7 +12,7 @@ import lombok.extern.log4j.Log4j2;
  * TurboShell main entrypoint
  * @author Daniel 'CosmicDan' Connolly
  */
-@SuppressWarnings("UtilityClass")
+@SuppressWarnings({"UtilityClass", "ClassWithTooManyTransitiveDependencies"})
 @Log4j2
 public final class Main {
 	private Main() {}

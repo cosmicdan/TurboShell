@@ -9,6 +9,10 @@ import lombok.experimental.UtilityClass;
  */
 @UtilityClass
 public final class TurboShellConfig {
-	@Getter
-	private static final int mTurboBarHeight = 25;
+	@Getter private static final int mTurboBarHeight = 25;
+
+	// Theme stuff
+	@Getter private static final String mTurboBarCloseBgPrimary = "a03048";
+	@Getter private static final String mTurboBarCloseBgSecondary = "e81123";
+
 }

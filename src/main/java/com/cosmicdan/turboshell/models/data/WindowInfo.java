@@ -10,9 +10,9 @@ import lombok.extern.log4j.Log4j2;
  * A holder/wrapper for window styles, title name, and other interesting information
  * @author Daniel 'CosmicDan' Connolly
  */
+@SuppressWarnings("WeakerAccess")
 @Log4j2
 public class WindowInfo {
-	@SuppressWarnings("PublicInnerClass")
 	public enum Cache {USE, SKIP}
 
 	private final HWND mHWnd;
@@ -35,7 +35,7 @@ public class WindowInfo {
 		return getTitle(Cache.USE);
 	}
 
-	public final String getTitle(final Cache cache) {
+	private final String getTitle(final Cache cache) {
 		// TODO: Get title of the owner/top window. Can be reproduced from Notepad++ "Reload" (modified file elsewhere) prompt
 		String windowTitle = "[No title]";
 		if ((null == mTitle) || (Cache.SKIP == cache)) {
@@ -53,8 +53,14 @@ public class WindowInfo {
 		return windowTitle;
 	}
 
-	public final void setTitle(final String newTitle) {
-		mTitle = newTitle;
+	public final boolean refreshTitle() {
+		boolean didUpdate = false;
+		String newTitle = getTitle(Cache.SKIP);
+		if (!newTitle.equals(getTitle())) {
+			mTitle = newTitle;
+			didUpdate = true;
+		}
+		return didUpdate;
 	}
 
 	/**

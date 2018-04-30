@@ -48,7 +48,6 @@ public abstract class AgentModel implements Runnable {
 	// Callback related things
 	///////////////////
 
-	@SuppressWarnings("PublicInnerClass")
 	@FunctionalInterface
 	public interface PayloadCallback {
 		void run(Object[] data);

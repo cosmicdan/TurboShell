@@ -5,14 +5,17 @@ import com.cosmicdan.turboshell.models.data.WindowInfo;
 import com.cosmicdan.turboshell.models.data.WindowInfo.Cache;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinUserEx;
+import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef.DWORD;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.LONG;
+import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
 import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.WinUser.MSG;
 import com.sun.jna.platform.win32.WinUser.WinEventProc;
+import com.sun.jna.ptr.IntByReference;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
@@ -26,9 +29,12 @@ import lombok.extern.log4j.Log4j2;
 public final class WinEventAgent extends AgentModel {
 	public static final WinEventAgent INSTANCE = new WinEventAgent();
 
+	public enum KillForegroundHardness{SOFT, HARD}
+
 	// Callback ID's
+	// TODO: Replace with objects
 	public static final int PAYLOAD_WINDOW_TITLE = 0;
-	public static final int PAYLOAD_WINDOW_SIZE_CHANGE = 1;
+	public static final int PAYLOAD_WINDOW_SYSBTN = 1;
 
 	private final SizedStack<WindowInfo> foregroundWindows = new SizedStack<>(10);
 	@Setter	private HWND mInitialTopHwnd;
@@ -44,7 +50,7 @@ public final class WinEventAgent extends AgentModel {
 	@Override
 	protected void serviceStart() {
 		log.info("Starting...");
-		final WinEventProc callback = new WinEventProcCallback(this);
+		final WinEventProc callback = new WinEventProcCallback();
 
 		// hook window location changes
 		hookLocationChange = setWinEventHook(
@@ -70,7 +76,7 @@ public final class WinEventAgent extends AgentModel {
 		final WindowInfo windowInfo = new WindowInfo(mInitialTopHwnd);
 		final boolean isRealWindow = windowInfo.isRealWindow();
 		if (isRealWindow)
-			WindowEventResponse.EVENT_SYSTEM_FOREGROUND.invoke(this, windowInfo);
+			WindowEventResponse.EVENT_SYSTEM_FOREGROUND.invoke(windowInfo);
 
 		// start runtime/message loop
 		final MSG msg = new MSG();
@@ -108,11 +114,7 @@ public final class WinEventAgent extends AgentModel {
 	 * Shared callback for the window event hooks we're interested in
 	 */
 	private static final class WinEventProcCallback implements WinEventProc {
-		private final WinEventAgent mWinEventAgent;
-
-		private WinEventProcCallback(final WinEventAgent winEventAgent) {
-			mWinEventAgent = winEventAgent;
-		}
+		private WinEventProcCallback() {}
 
 		@Override
 		public void callback(final HANDLE hWinEventHook,
@@ -127,7 +129,7 @@ public final class WinEventAgent extends AgentModel {
 				if (windowInfo.isRealWindow()) {
 					for (final WindowEventResponse response : WindowEventResponse.values()) {
 						if (event.longValue() == response.mEventConstant) {
-							response.invoke(mWinEventAgent, windowInfo);
+							response.invoke(windowInfo);
 						}
 					}
 				}
@@ -138,46 +140,50 @@ public final class WinEventAgent extends AgentModel {
 	/**
 	 * WinEventProcCallback (window event hooks) response logic
 	 */
-	@SuppressWarnings("OverlyLongLambda")
 	enum WindowEventResponse implements IWindowEventResponse {
-		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
+		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND, (WindowInfo newWindowInfo) -> {
 			log.info("Foreground window changed");
-			addOrUpdateWindowStack(winEventAgent, newWindowInfo);
+			addOrUpdateWindowStack(newWindowInfo);
 			// run callbacks
-			winEventAgent.runCallbacks(PAYLOAD_WINDOW_TITLE, newWindowInfo.getTitle());
-			winEventAgent.runCallbacks(PAYLOAD_WINDOW_SIZE_CHANGE, newWindowInfo.isMaximized(), newWindowInfo.canResize());
+			INSTANCE.runCallbacks(PAYLOAD_WINDOW_TITLE, newWindowInfo.getTitle());
+			INSTANCE.runCallbacks(PAYLOAD_WINDOW_SYSBTN,
+					newWindowInfo.isMaximized(), newWindowInfo.canMaximize(), newWindowInfo.hasMinimizeButton());
 		}),
-		EVENT_OBJECT_LOCATIONCHANGE(WinUserEx.EVENT_OBJECT_LOCATIONCHANGE, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
+		EVENT_OBJECT_LOCATIONCHANGE(WinUserEx.EVENT_OBJECT_LOCATIONCHANGE, (WindowInfo newWindowInfo) -> {
 			//log.info("A window location changed");
-			addOrUpdateWindowStack(winEventAgent, newWindowInfo);
-			winEventAgent.runCallbacks(PAYLOAD_WINDOW_SIZE_CHANGE, newWindowInfo.isMaximized(), newWindowInfo.canResize());
-
+			addOrUpdateWindowStack(newWindowInfo);
+			INSTANCE.runCallbacks(PAYLOAD_WINDOW_SYSBTN,
+					newWindowInfo.isMaximized(), newWindowInfo.canMaximize(), newWindowInfo.hasMinimizeButton());
 		}),
-		EVENT_OBJECT_NAMECHANGE(WinUserEx.EVENT_OBJECT_NAMECHANGE, (WinEventAgent winEventAgent, WindowInfo newWindowInfo) -> {
+		EVENT_OBJECT_NAMECHANGE(WinUserEx.EVENT_OBJECT_NAMECHANGE, (WindowInfo newWindowInfo) -> {
 			// check if hWnd is the same as top of the stack (i.e. foreground), if not then ignore it
-			if (!winEventAgent.foregroundWindows.isEmpty() &&
-					winEventAgent.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
+			if (!INSTANCE.foregroundWindows.isEmpty() &&
+					INSTANCE.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
 				// get new title
-				final WindowInfo foregroundWindowInfo = winEventAgent.foregroundWindows.peek();
-				final String newTitle = foregroundWindowInfo.getTitle(Cache.SKIP);
-				// update window title only if required
-				if (!newTitle.equals(foregroundWindowInfo.getTitle())) {
-					foregroundWindowInfo.setTitle(newTitle);
-					winEventAgent.runCallbacks(PAYLOAD_WINDOW_TITLE, newTitle);
-				}
+				final WindowInfo foregroundWindowInfo = INSTANCE.foregroundWindows.peek();
+				if (foregroundWindowInfo.refreshTitle())
+					INSTANCE.runCallbacks(PAYLOAD_WINDOW_TITLE, foregroundWindowInfo.getTitle());
 			}
 		});
 
-		private static void addOrUpdateWindowStack(WinEventAgent winEventAgent, WindowInfo newWindowInfo) {
+		/**
+		 * Add a new WindowInfo to the foregroundWindows stack
+		 * @param newWindowInfo The new WindowInfo object to add
+		 * @return true if an existing WindowInfo hWnd was detected (and removed) from the stack, otherwise false
+		 */
+		private static boolean addOrUpdateWindowStack(final WindowInfo newWindowInfo) {
 			// If this hWnd exists anywhere in the stack, remove it first
-			for (int i = 0; i < winEventAgent.foregroundWindows.size(); i++) {
-				if (winEventAgent.foregroundWindows.get(i).getHWnd().equals(newWindowInfo.getHWnd())) {
-					winEventAgent.foregroundWindows.remove(i);
+			boolean isReplaced = false;
+			for (int i = 0; i < INSTANCE.foregroundWindows.size(); i++) {
+				if (INSTANCE.foregroundWindows.get(i).getHWnd().equals(newWindowInfo.getHWnd())) {
+					INSTANCE.foregroundWindows.remove(i);
+					isReplaced = true;
 					break;
 				}
 			}
 			// add the fresh hwnd to top of the stack
-			winEventAgent.foregroundWindows.push(newWindowInfo);
+			INSTANCE.foregroundWindows.push(newWindowInfo);
+			return isReplaced;
 		}
 
 		private final int mEventConstant;
@@ -189,14 +195,14 @@ public final class WinEventAgent extends AgentModel {
 		}
 
 		@Override
-		public void invoke(final WinEventAgent winEventAgent, final WindowInfo newWindowInfo) {
-			mWindowEventResponse.invoke(winEventAgent, newWindowInfo);
+		public void invoke(final WindowInfo newWindowInfo) {
+			mWindowEventResponse.invoke(newWindowInfo);
 		}
 	}
 
 	@FunctionalInterface
 	interface IWindowEventResponse {
-		void invoke(WinEventAgent winEventAgent, WindowInfo newWindowInfo);
+		void invoke(WindowInfo newWindowInfo);
 	}
 
 	//////////////////////////////////////////////////////////////
@@ -220,6 +226,39 @@ public final class WinEventAgent extends AgentModel {
 			final WindowInfo foregroundWindow = foregroundWindows.peek();
 			User32Ex.INSTANCE.ShowWindowAsync(foregroundWindow.getHWnd(),
 					foregroundWindow.isMaximized() ? WinUser.SW_RESTORE : WinUser.SW_MAXIMIZE);
+		}
+	}
+
+	/**
+	 * Politely close the foreground window.
+	 */
+	public void closeForeground() {
+		if (!foregroundWindows.isEmpty()) {
+			// CRASHES! Issue reported - https://github.com/java-native-access/jna/issues/905
+			//	- Not really a big deal, this doesn't need to be especially fast. Just use interface mapping.
+			//User32Ex.INSTANCE.PostMessageW(Environment.getInstance().getLastActiveHwnd(), WinUser.WM_CLOSE, null, null);
+			User32.INSTANCE.PostMessage(foregroundWindows.peek().getHWnd(), WinUser.WM_CLOSE, null, null);
+		}
+	}
+
+	/**
+	 * Kill the foreground window.
+	 * @param hardness If HARD, will force kill it via TerminateProcess. Otherwise sends WM_QUIT.
+	 */
+	public void killForeground(final KillForegroundHardness hardness) {
+		if (!foregroundWindows.isEmpty()) {
+			final HWND foregroundWindow = foregroundWindows.peek().getHWnd();
+			if (KillForegroundHardness.HARD == hardness) {
+				final IntByReference pid = new IntByReference();
+				User32.INSTANCE.GetWindowThreadProcessId(foregroundWindow, pid);
+				final HANDLE hProcess = Kernel32.INSTANCE.OpenProcess(WinNT.PROCESS_TERMINATE, false, pid.getValue());
+				final boolean result = Kernel32.INSTANCE.TerminateProcess(hProcess, 0);
+				log.info("Called TerminateProcess on hWnd {}; result = {} (GetLastError = {})",
+						foregroundWindow, result, Kernel32.INSTANCE.GetLastError());
+			} else {
+				User32.INSTANCE.PostMessage(foregroundWindow, WinUser.WM_QUIT, null, null);
+				log.info("Sent WM_QUIT message to hWnd " + foregroundWindow);
+			}
 		}
 	}
 }

@@ -1,5 +1,6 @@
 package com.cosmicdan.turboshell.turbobar;
 
+import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnMinimizeState;
 import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnResizeState;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import javafx.event.Event;
@@ -8,19 +9,20 @@ import javafx.event.Event;
  * Contract between TurboBar view and presenter
  * @author Daniel 'CosmicDan' Connolly
  */
-@SuppressWarnings({"InterfaceNeverImplemented", "ClassIndependentOfModule", "PublicInnerClass"})
+@SuppressWarnings({"InterfaceNeverImplemented", "ClassIndependentOfModule"})
 public interface TurboBarContract {
 	@SuppressWarnings("CyclicClassDependency")
 	interface ITurboBarView {
 		void setPresenter(ITurboBarPresenter presenter);
 		void setup(int xPos, int width, int barHeight, String css, String windowName);
 		void refreshSize(final int xPos, final int width, final int barHeight);
+		void updateSysBtnMinimize(SysBtnMinimizeState toState);
 		void updateSysBtnResize(SysBtnResizeState toState);
 	}
 
 	@SuppressWarnings("CyclicClassDependency")
 	interface ITurboBarPresenter {
-		ITurboBarView getTurboBarView();
+		//ITurboBarView getTurboBarView();
 
 		HWND getTurboBarHWnd();
 

@@ -1,11 +1,12 @@
 package com.cosmicdan.turboshell.turbobar;
 
-import com.cosmicdan.turboshell.models.AgentModel;
 import com.cosmicdan.turboshell.models.TurboShellConfig;
 import com.cosmicdan.turboshell.models.WinEventAgent;
+import com.cosmicdan.turboshell.models.WinEventAgent.KillForegroundHardness;
 import com.cosmicdan.turboshell.models.WindowsEnvironment;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
+import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnMinimizeState;
 import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnResizeState;
 import com.cosmicdan.turboshell.winapi.ShellAPIEx;
 import com.cosmicdan.turboshell.winapi.User32Ex;
@@ -62,10 +63,10 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		return turboBarHWnd;
 	}
 
-	@Override
-	public final ITurboBarView getTurboBarView() {
-		return turboBarView;
-	}
+	//@Override
+	//public final ITurboBarView getTurboBarView() {
+	//	return turboBarView;
+	//}
 
 	@SuppressWarnings({"ReturnOfThis", "FeatureEnvy"})
 	public final ITurboBarPresenter setup(final ITurboBarView view) {
@@ -155,12 +156,13 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	 * @param initialTopHwnd The initial foreground hWnd that was retrieved on TurboShell startup, so it can be re-activated after
 	 *                       TurboShell steals focus
 	 */
+	@SuppressWarnings("FeatureEnvy")
 	private void setupModelsAndObservers(final HWND initialTopHwnd) {
 		WinEventAgent.INSTANCE.setInitialTopHwnd(initialTopHwnd);
 		WinEventAgent.INSTANCE.registerCallback(WinEventAgent.PAYLOAD_WINDOW_TITLE,
 				(Object[] data) -> updateWindowTitle((String)data[0]));
-		WinEventAgent.INSTANCE.registerCallback(WinEventAgent.PAYLOAD_WINDOW_SIZE_CHANGE,
-				(Object[] data) -> updateWindowSize((boolean)data[0], (boolean)data[1]));
+		WinEventAgent.INSTANCE.registerCallback(WinEventAgent.PAYLOAD_WINDOW_SYSBTN,
+				(Object[] data) -> updateWindowSize((boolean)data[0], (boolean)data[1], (boolean)data[2]));
 		WinEventAgent.INSTANCE.start();
 	}
 
@@ -203,9 +205,9 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	@SuppressWarnings("Singleton")
 	private enum AppbarCallback implements IAppbarCallback {
 		ABN_FULLSCREENAPP(ShellAPIEx.ABN_FULLSCREENAPP, (ITurboBarPresenter turboBarPresenter, LPARAM lParam) -> {
-			final boolean fullscreenEntered = (1 == lParam.intValue());
+			final boolean fullscreenExited = (1 != lParam.intValue());
 			//log.info("Fullscreen entered: {}", fullscreenEntered);
-			turboBarPresenter.setTopmost(!fullscreenEntered);
+			turboBarPresenter.setTopmost(fullscreenExited);
 		});
 
 		private final int mAppbarCallbackConstant;
@@ -240,13 +242,15 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		log.info("Got window title update: {}", windowTitle);
 	}
 
-	private void updateWindowSize(final boolean isMaximized, boolean canMaximize) {
-		//log.info("Got window size update: isMaximized={}; canMaximize={}", isMaximized, canMaximize);
+	private void updateWindowSize(final boolean isMaximized, final boolean canMaximize, final boolean canMinimize) {
+		// check if window can be resized
 		SysBtnResizeState newState = SysBtnResizeState.DISABLED;
 		if (canMaximize) {
 			newState = isMaximized ? SysBtnResizeState.RESTORE : SysBtnResizeState.MAXIMIZE;
 		}
 		turboBarView.updateSysBtnResize(newState);
+		// check if window can be minimized
+		turboBarView.updateSysBtnMinimize(canMinimize ? SysBtnMinimizeState.ENABLED : SysBtnMinimizeState.DISABLED);
 	}
 
 	@Override
@@ -278,8 +282,15 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 			WinEventAgent.INSTANCE.resizeForeground();
 		}),
 		CLOSE((ITurboBarPresenter presenter, Event event) -> {
-
+			WinEventAgent.INSTANCE.closeForeground();
+		}),
+		FORCE_CLOSE((ITurboBarPresenter presenter, Event event) -> {
+			WinEventAgent.INSTANCE.killForeground(KillForegroundHardness.SOFT);
+		}),
+		KILL((ITurboBarPresenter presenter, Event event) -> {
+			WinEventAgent.INSTANCE.killForeground(KillForegroundHardness.HARD);
 		});
+
 
 		private final ViewAction mViewAction;
 
