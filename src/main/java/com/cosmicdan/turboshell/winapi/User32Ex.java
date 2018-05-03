@@ -54,6 +54,10 @@ public final class User32Ex {
 	public native BOOL ShowWindowAsync(HWND hWnd, int nCmdShow);
 	/** See {@link User32#GetWindowRect} */
 	public native boolean GetWindowRect(HWND hWnd, RECT rect);
+	/** See {@link User32#GetForegroundWindow} */
+	public native HWND GetForegroundWindow();
+	/** See {@link User32#GetClassName} */
+	public native int GetClassName(HWND hWnd, char[] lpClassName, int nMaxCount);
 
 
 	// Callback/Window message related stuff

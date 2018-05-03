@@ -217,9 +217,10 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	@SuppressWarnings("Singleton")
 	private enum AppbarCallback implements IAppbarCallback {
 		ABN_FULLSCREENAPP(ShellAPIEx.ABN_FULLSCREENAPP, (ITurboBarPresenter turboBarPresenter, LPARAM lParam) -> {
-			final boolean fullscreenExited = (1 != lParam.intValue());
-			//log.info("Fullscreen entered: {}", fullscreenEntered);
-			turboBarPresenter.setTopmost(fullscreenExited);
+			if (!WindowsEnvironment.isDesktopFocused()) {
+				final boolean fullscreenExited = (1 != lParam.intValue());
+				turboBarPresenter.setTopmost(fullscreenExited);
+			}
 		});
 
 		private final int mAppbarCallbackConstant;

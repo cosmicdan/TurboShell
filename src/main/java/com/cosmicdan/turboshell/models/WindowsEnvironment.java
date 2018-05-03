@@ -1,6 +1,9 @@
 package com.cosmicdan.turboshell.models;
 
+import com.cosmicdan.turboshell.winapi.User32Ex;
+import com.sun.jna.Native;
 import com.sun.jna.platform.win32.User32;
+import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinDef.POINT.ByValue;
 import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.WinUser.HMONITOR;
@@ -30,5 +33,17 @@ public final class WindowsEnvironment {
 		return new int[] {
 				mainMonitorInfo.rcWork.left, mainMonitorInfo.rcWork.right - mainMonitorInfo.rcWork.left
 		};
+	}
+
+	public static boolean isDesktopFocused() {
+		boolean isDesktop = false;
+		HWND foregroundHWnd = User32Ex.INSTANCE.GetForegroundWindow();
+
+		final char[] windowClassNameChar = new char[512];
+		User32Ex.INSTANCE.GetClassName(foregroundHWnd, windowClassNameChar, 512);
+		String windowClassName = Native.toString(windowClassNameChar);
+		if (TurboShellConfig.getFullscreenHideExcludeClasses().contains(windowClassName))
+			isDesktop = true;
+		return isDesktop;
 	}
 }
