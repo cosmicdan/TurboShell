@@ -85,27 +85,30 @@ public class TurboBarView implements ITurboBarView {
 		// Start a new controls factory
 		final TurboBarControlFactory factory = new TurboBarControlFactory(getClass(), barHeight);
 
-		// Add all the controls we want from factory...
+		//////////////////////////////////////////////////////////////
+		// Center padding (for right alignment)
+		//////////////////////////////////////////////////////////////
 		coreControls.add(TurboBarControlFactory.newCenterPaddingRegion());
 
+		coreControls.add(TurboBarControlFactory.newVerticalSeparator());
+
 		//////////////////////////////////////////////////////////////
-		// SysButton - Minimize
+		// SysButtons
+		//////////////////////////////////////////////////////////////
+
+		// minimize
 		sysBtnMinimize = factory.newGenericButton(
 				"TurboBar_sysbtn_minimize.png",
 				MouseEvent.MOUSE_CLICKED,
 				(MouseEvent event) -> SysBtnAction.MINIMIZE.invoke(mPresenter, event));
 		coreControls.add(sysBtnMinimize);
-
-		//////////////////////////////////////////////////////////////
-		// SysButton - Restore/Maximize
+		// resize (maximize/restore)
 		sysBtnResize = factory.newGenericButton(
 				new String[] {"TurboBar_sysbtn_resize_maximize.png", "TurboBar_sysbtn_resize_restore.png"},
 				MouseEvent.MOUSE_CLICKED,
 				(MouseEvent event) -> SysBtnAction.RESIZE.invoke(mPresenter, event));
 		coreControls.add(sysBtnResize);
-
-		//////////////////////////////////////////////////////////////
-		// SysButton - Close
+		// close
 		sysBtnClose = factory.newGenericButton(
 				"TurboBar_sysbtn_close.png",
 				null,
@@ -125,7 +128,8 @@ public class TurboBarView implements ITurboBarView {
 		coreControls.add(sysBtnClose);
 
 		//////////////////////////////////////////////////////////////
-		// All done, now actually add them to the stage
+		// TirboBar controls done, add them to the stage
+		//////////////////////////////////////////////////////////////
 		pane.getChildren().addAll(coreControls);
 	}
 

@@ -15,9 +15,19 @@ import java.util.Set;
 public final class TurboShellConfig {
 	@Getter private static final int mTurboBarHeight = 25;
 
-	// Theme stuff
+	//////////////////////////////////////////////////////////////
+	// Theme
+	//////////////////////////////////////////////////////////////
+
+	// SysBtns
 	@Getter private static final String mTurboBarCloseBgPrimary = "a03048";
 	@Getter private static final String mTurboBarCloseBgSecondary = "e81123";
+
+	// Seperators
+	@Getter private static final double mTurboBarVerticalSeparatorMarginX = 5.0;
+	@Getter private static final double mTurboBarVerticalSeparatorMarginY = 5.0;
+	@Getter private static final String mTurboBarVerticalSeparatorColor = "ffffff";
+	@Getter private static final double mTurboBarVerticalSeparatorOpacity = 0.2;
 
 	@Getter private static final Set<String> mFullscreenHideExcludeClasses = new HashSet<>(
 			Arrays.asList("WorkerW", "Progman")

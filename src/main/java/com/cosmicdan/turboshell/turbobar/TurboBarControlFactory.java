@@ -1,17 +1,21 @@
 package com.cosmicdan.turboshell.turbobar;
 
 import com.cosmicdan.turboshell.gui.AdaptiveButton;
+import com.cosmicdan.turboshell.models.TurboShellConfig;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
+import javafx.geometry.Insets;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import lombok.extern.log4j.Log4j2;
 
 /**
  * Main factory for creating TurboBar controls
  * @author Daniel 'CosmicDan' Connolly
  */
+
+@Log4j2(topic = "TurboBarControlFactory")
 class TurboBarControlFactory {
 	private final int mTurboBarHeight;
 	private final Class<?> mSourceClass;
@@ -24,27 +28,41 @@ class TurboBarControlFactory {
 	/**
 	 * @return An auto-stretch region for HBox children, providing right-aligned controls for anything that follows.
 	 */
-	public static Region newCenterPaddingRegion() {
+	static Region newCenterPaddingRegion() {
 		final Region centerPadding = new Region();
 		HBox.setHgrow(centerPadding, Priority.ALWAYS);
 		return centerPadding;
 	}
 
+	static Region newVerticalSeparator() {
+		final Region separator = new Region();
+		separator.setMaxSize(1, Double.MAX_VALUE);
+		separator.setPrefSize(1, Double.MAX_VALUE);
+		HBox.setMargin(separator, new Insets(
+				TurboShellConfig.getTurboBarVerticalSeparatorMarginY(), TurboShellConfig.getTurboBarVerticalSeparatorMarginX(),
+				TurboShellConfig.getTurboBarVerticalSeparatorMarginY(), TurboShellConfig.getTurboBarVerticalSeparatorMarginX()));
+		separator.setBackground(new Background(new BackgroundFill(
+				Color.web(TurboShellConfig.getTurboBarVerticalSeparatorColor()), CornerRadii.EMPTY, Insets.EMPTY)));
+		separator.setOpacity(TurboShellConfig.getTurboBarVerticalSeparatorOpacity());
+
+		return separator;
+	}
+
 	/**
 	 * Build a new transparent Button with no text and a single graphic state
 	 */
-	public final <T extends Event> AdaptiveButton newGenericButton(final String imageResourcePath,
-																   final EventType<T> eventType,
-																   final EventHandler<? super T> eventHandler) {
+	final <T extends Event> AdaptiveButton newGenericButton(final String imageResourcePath,
+															final EventType<T> eventType,
+															final EventHandler<? super T> eventHandler) {
 		return newGenericButton("", new String[] {imageResourcePath}, eventType, eventHandler);
 	}
 
 	/**
 	 * Build a new transparent Button with no text and multiple graphic states
 	 */
-	public final <T extends Event> AdaptiveButton newGenericButton(final String[] imageResourcePaths,
-																   final EventType<T> eventType,
-																   final EventHandler<? super T> eventHandler) {
+	final <T extends Event> AdaptiveButton newGenericButton(final String[] imageResourcePaths,
+															final EventType<T> eventType,
+															final EventHandler<? super T> eventHandler) {
 		return newGenericButton("", imageResourcePaths, eventType, eventHandler);
 	}
 
