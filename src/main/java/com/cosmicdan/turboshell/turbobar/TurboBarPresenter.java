@@ -1,11 +1,13 @@
 package com.cosmicdan.turboshell.turbobar;
 
 import com.cosmicdan.turboshell.models.AgentModel.PayloadCallback;
+import com.cosmicdan.turboshell.models.CalendarAgent;
 import com.cosmicdan.turboshell.models.TurboShellConfig;
 import com.cosmicdan.turboshell.models.WinEventAgent;
 import com.cosmicdan.turboshell.models.WinEventAgent.KillForegroundHardness;
 import com.cosmicdan.turboshell.models.WindowsEnvironment;
 import com.cosmicdan.turboshell.models.data.WindowInfo.Flag;
+import com.cosmicdan.turboshell.models.payloads.CalendarChangePayload;
 import com.cosmicdan.turboshell.models.payloads.WindowSysBtnUpdatePayload;
 import com.cosmicdan.turboshell.models.payloads.WindowTitleChangePayload;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
@@ -176,6 +178,26 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 				(PayloadCallback<WindowSysBtnUpdatePayload>) this::updateSysBtns);
 
 		WinEventAgent.INSTANCE.start();
+
+		// Calendar
+		CalendarAgent.INSTANCE.registerCallback(CalendarChangePayload.class,
+				(PayloadCallback<CalendarChangePayload>) this::updateDateTime);
+
+		CalendarAgent.INSTANCE.start();
+	}
+
+	@Override
+	public final void setTopmost(final boolean topmost) {
+		if (topmost == mIsTopmost) // cache check to save API calls
+			return;
+		User32Ex.INSTANCE.SetWindowPos(
+				turboBarHWnd,
+				topmost ? WinUserEx.HWND_TOPMOST : WinUserEx.HWND_BOTTOM,
+				0, 0, 0, 0, turboBarFlags
+		);
+		if (topmost) // Will put TurboBar above *other* topmost windows too. Might not be necessary but meh.
+			User32Ex.INSTANCE.SetWindowPos(turboBarHWnd, WinUserEx.HWND_TOP , 0, 0, 0, 0, turboBarFlags);
+		mIsTopmost = topmost;
 	}
 
 	//////////////////////////////////////////////////////////////
@@ -263,18 +285,17 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		turboBarView.updateSysBtnMinimize(currentWindowFlags.contains(Flag.IS_MINIMIZABLE) ? SysBtnMinimizeState.ENABLED : SysBtnMinimizeState.DISABLED);
 	}
 
-	@Override
-	public final void setTopmost(final boolean topmost) {
-		if (topmost == mIsTopmost) // cache check to save API calls
-			return;
-		User32Ex.INSTANCE.SetWindowPos(
-				turboBarHWnd,
-				topmost ? WinUserEx.HWND_TOPMOST : WinUserEx.HWND_BOTTOM,
-				0, 0, 0, 0, turboBarFlags
-		);
-		if (topmost) // Will put TurboBar above *other* topmost windows too. Might not be necessary but meh.
-			User32Ex.INSTANCE.SetWindowPos(turboBarHWnd, WinUserEx.HWND_TOP , 0, 0, 0, 0, turboBarFlags);
-		mIsTopmost = topmost;
+
+	private void updateDateTime(final CalendarChangePayload payload) {
+		turboBarView.updateDateTime(String.format("%d-%02d-%02d", payload.getYearNum(), payload.getMonthNum(), payload.getDayNum()));
+
+		/*
+		turboBarView.updateDateTime(payload.getYearNum() + '-' + String.format("%02d", payload.getMonthNum()) + '-' + String.format("%02d", payload.getDayNum()));
+
+
+		log.info("Got calendar update: {}-{}-{}",
+				payload.getYearNum(), String.format("%02d", payload.getMonthNum()), String.format("%02d", payload.getDayNum()));
+*/
 	}
 
 	//////////////////////////////////////////////////////////////

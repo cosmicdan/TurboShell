@@ -10,7 +10,9 @@ import com.cosmicdan.turboshell.turbobar.TurboBarPresenter.SysBtnAction;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -45,10 +47,13 @@ public class TurboBarView implements ITurboBarView {
 	private static AdaptiveButton sysBtnResize = null;
 	private static AdaptiveButton sysBtnClose = null;
 
+	private static Label dateTime = null;
+
 	public TurboBarView(final Stage primaryStage) {
 		mPrimaryStage = primaryStage;
 		pane = new HBox();
 		pane.setId("turbobar");
+		pane.setAlignment(Pos.CENTER_LEFT);
 	}
 
 	@Override
@@ -88,9 +93,14 @@ public class TurboBarView implements ITurboBarView {
 		//////////////////////////////////////////////////////////////
 		// Center padding (for right alignment)
 		//////////////////////////////////////////////////////////////
-		coreControls.add(TurboBarControlFactory.newCenterPaddingRegion());
+		coreControls.add(factory.newCenterPaddingRegion());
 
-		coreControls.add(TurboBarControlFactory.newVerticalSeparator());
+		// Date
+		dateTime = factory.newLabel();
+		coreControls.add(dateTime);
+
+		// Separator
+		coreControls.add(factory.newVerticalSeparator());
 
 		//////////////////////////////////////////////////////////////
 		// SysButtons
@@ -182,6 +192,12 @@ public class TurboBarView implements ITurboBarView {
 			// set disabled/enabled
 			sysBtnResize.setDisable(SysBtnResizeState.DISABLED == toState);
 		});
+	}
+
+	@Override
+	public void updateDateTime(final String date) {
+		log.info(date);
+		dateTime.setText(date);
 	}
 
 

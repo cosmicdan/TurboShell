@@ -6,8 +6,10 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Insets;
+import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -28,13 +30,13 @@ class TurboBarControlFactory {
 	/**
 	 * @return An auto-stretch region for HBox children, providing right-aligned controls for anything that follows.
 	 */
-	static Region newCenterPaddingRegion() {
+	Region newCenterPaddingRegion() {
 		final Region centerPadding = new Region();
 		HBox.setHgrow(centerPadding, Priority.ALWAYS);
 		return centerPadding;
 	}
 
-	static Region newVerticalSeparator() {
+	Region newVerticalSeparator() {
 		final Region separator = new Region();
 		separator.setMaxSize(1, Double.MAX_VALUE);
 		separator.setPrefSize(1, Double.MAX_VALUE);
@@ -46,6 +48,15 @@ class TurboBarControlFactory {
 		separator.setOpacity(TurboShellConfig.getTurboBarVerticalSeparatorOpacity());
 
 		return separator;
+	}
+
+	Label newLabel() {
+		Label label = new Label();
+		label.setTextFill(Color.web(TurboShellConfig.getTextColorMain()));
+		label.setFont(Font.font("Consolas", 11));
+		label.setPadding(new Insets(5));
+		label.setOpacity(1.0);
+		return label;
 	}
 
 	/**

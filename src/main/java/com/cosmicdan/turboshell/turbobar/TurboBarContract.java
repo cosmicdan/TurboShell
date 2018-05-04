@@ -18,6 +18,7 @@ public interface TurboBarContract {
 		void refreshSize(final int xPos, final int width, final int barHeight);
 		void updateSysBtnMinimize(SysBtnMinimizeState toState);
 		void updateSysBtnResize(SysBtnResizeState toState);
+		void updateDateTime(String date);
 	}
 
 	@SuppressWarnings("CyclicClassDependency")

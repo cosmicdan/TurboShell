@@ -19,6 +19,9 @@ public final class TurboShellConfig {
 	// Theme
 	//////////////////////////////////////////////////////////////
 
+	// General
+	@Getter private static final String mTextColorMain = "bbb";
+
 	// SysBtns
 	@Getter private static final String mTurboBarCloseBgPrimary = "a03048";
 	@Getter private static final String mTurboBarCloseBgSecondary = "e81123";
