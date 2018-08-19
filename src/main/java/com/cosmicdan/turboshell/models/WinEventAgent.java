@@ -20,6 +20,8 @@ import com.sun.jna.ptr.IntByReference;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
+import java.awt.*;
+
 /**
  * Agent model for hooking and responding to WinEvents on the system, and also initiates windows-related events triggered by a
  * Presenter. Callbacks are processed in its own thread.
@@ -140,9 +142,7 @@ public final class WinEventAgent extends AgentModel {
 		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND, (WindowInfo newWindowInfo) -> {
 			//log.info("Foreground window changed");
 			addOrUpdateWindowStack(newWindowInfo);
-			// run callbacks
-			INSTANCE.runCallbacks(new WindowTitleChangePayload(newWindowInfo.getTitle()));
-			INSTANCE.runCallbacks(new WindowSysBtnUpdatePayload(newWindowInfo.getFlags()));
+			runAllCallbacks(newWindowInfo);
 		}),
 		EVENT_OBJECT_LOCATIONCHANGE(WinUserEx.EVENT_OBJECT_LOCATIONCHANGE, (WindowInfo newWindowInfo) -> {
 			//log.info("A window location changed");
@@ -154,12 +154,16 @@ public final class WinEventAgent extends AgentModel {
 			final WindowInfo foregroundWindowInfo = INSTANCE.foregroundWindows.peek();
 			if (!INSTANCE.foregroundWindows.isEmpty() &&
 					foregroundWindowInfo.getHWnd().equals(newWindowInfo.getHWnd())) {
-				// get new title
-				if (foregroundWindowInfo.refreshTitle(newWindowInfo.getTitle())) {
-					INSTANCE.runCallbacks(new WindowTitleChangePayload(newWindowInfo.getTitle()));
-				}
+				// set new title
+				// TODO: Cache the title and only post if it's actually changed
+				INSTANCE.runCallbacks(new WindowTitleChangePayload(foregroundWindowInfo.getTitle()));
 			}
 		});
+
+		private static void runAllCallbacks(final WindowInfo newWindowInfo) {
+			INSTANCE.runCallbacks(new WindowTitleChangePayload(newWindowInfo.getTitle()));
+			INSTANCE.runCallbacks(new WindowSysBtnUpdatePayload(newWindowInfo.getFlags()));
+		}
 
 		/**
 		 * Add a new WindowInfo to the foregroundWindows stack
@@ -171,7 +175,6 @@ public final class WinEventAgent extends AgentModel {
 			boolean isReplaced = false;
 			for (int i = 0; i < INSTANCE.foregroundWindows.size(); i++) {
 				if (INSTANCE.foregroundWindows.get(i).getHWnd().equals(newWindowInfo.getHWnd())) {
-
 					INSTANCE.foregroundWindows.remove(i);
 					isReplaced = true;
 					break;
