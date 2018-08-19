@@ -5,7 +5,6 @@ import com.cosmicdan.turboshell.winapi.WinUserEx;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinUser;
-import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.EnumSet;
@@ -18,6 +17,8 @@ import java.util.EnumSet;
 @Log4j2
 public class WindowInfo {
 	public static final String NO_TITLE = "[NO TITLE]";
+
+	public enum Cache {USE, SKIP}
 
 	public enum Flag {
 		IS_MAXIMIZED,
@@ -41,8 +42,12 @@ public class WindowInfo {
 		return mHWnd;
 	}
 
-	public String getTitle() {
-		if (null == mTitle) {
+	public final String getTitle() {
+		return getTitle(Cache.USE);
+	}
+
+	private String getTitle(final Cache cache) {
+		if ((null == mTitle) || (Cache.SKIP == cache)) {
 			// get the title for the new window
 			final int titleLength = User32Ex.INSTANCE.GetWindowTextLength(mHWnd) + 1;
 			final char[] title = new char[titleLength];
@@ -50,7 +55,8 @@ public class WindowInfo {
 			String windowTitle = NO_TITLE;
 			if (0 < length)
 				windowTitle = new String(title);
-			mTitle = windowTitle;
+			if ((null == mTitle) || (Cache.USE == cache))
+				mTitle = windowTitle;
 		}
 		return mTitle;
 	}
