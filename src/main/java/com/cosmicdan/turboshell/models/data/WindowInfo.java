@@ -47,7 +47,6 @@ public class WindowInfo {
 	}
 
 	private String getTitle(final Cache cache) {
-		// TODO: Get title of the owner/top window. Can be reproduced from Notepad++ "Reload" (modified file elsewhere) prompt
 		if ((null == mTitle) || (Cache.SKIP == cache)) {
 			// get the title for the new window
 			final int titleLength = User32Ex.INSTANCE.GetWindowTextLength(mHWnd) + 1;
@@ -62,9 +61,8 @@ public class WindowInfo {
 		return mTitle;
 	}
 
-	public final boolean refreshTitle() {
+	public final boolean refreshTitle(final String newTitle) {
 		boolean didUpdate = false;
-		final String newTitle = getTitle(Cache.SKIP);
 		if (!newTitle.equals(getTitle())) {
 			mTitle = newTitle;
 			didUpdate = true;
@@ -82,7 +80,7 @@ public class WindowInfo {
 	public final boolean isRealWindow() {
 		boolean isReal = false;
 		if (!hasExStyle(WinUserEx.WS_EX_TOOLWINDOW)) {
-			if (hasStyle(WinUserEx.WS_EX_APPWINDOW) || (!hasExStyle(WinUserEx.WS_EX_NOACTIVATE))) {
+			if (hasStyle(WinUserEx.WS_EX_APPWINDOW) || (!hasExStyle(WinUserEx.WS_EX_NOACTIVATE)) || !hasTitle()) {
 				isReal = true;
 			}
 		}
@@ -146,5 +144,9 @@ public class WindowInfo {
 
 	private boolean hasExStyle(final long windowExStyle) {
 		return windowExStyle == (styleExFlags & windowExStyle);
+	}
+
+	private boolean hasTitle() {
+		return !NO_TITLE.equals(mTitle);
 	}
 }

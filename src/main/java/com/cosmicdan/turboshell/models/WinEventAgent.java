@@ -150,13 +150,12 @@ public final class WinEventAgent extends AgentModel {
 			INSTANCE.runCallbacks(new WindowSysBtnUpdatePayload(newWindowInfo.getFlags()));
 		}),
 		EVENT_OBJECT_NAMECHANGE(WinUserEx.EVENT_OBJECT_NAMECHANGE, (WindowInfo newWindowInfo) -> {
-			//log.info("A window title changed");
 			// check if hWnd is the same as top of the stack (i.e. foreground), if not then ignore it
+			final WindowInfo foregroundWindowInfo = INSTANCE.foregroundWindows.peek();
 			if (!INSTANCE.foregroundWindows.isEmpty() &&
-					INSTANCE.foregroundWindows.peek().getHWnd().equals(newWindowInfo.getHWnd())) {
+					foregroundWindowInfo.getHWnd().equals(newWindowInfo.getHWnd())) {
 				// get new title
-				final WindowInfo foregroundWindowInfo = INSTANCE.foregroundWindows.peek();
-				if (foregroundWindowInfo.refreshTitle()) {
+				if (foregroundWindowInfo.refreshTitle(newWindowInfo.getTitle())) {
 					INSTANCE.runCallbacks(new WindowTitleChangePayload(newWindowInfo.getTitle()));
 				}
 			}
@@ -172,6 +171,7 @@ public final class WinEventAgent extends AgentModel {
 			boolean isReplaced = false;
 			for (int i = 0; i < INSTANCE.foregroundWindows.size(); i++) {
 				if (INSTANCE.foregroundWindows.get(i).getHWnd().equals(newWindowInfo.getHWnd())) {
+
 					INSTANCE.foregroundWindows.remove(i);
 					isReplaced = true;
 					break;
