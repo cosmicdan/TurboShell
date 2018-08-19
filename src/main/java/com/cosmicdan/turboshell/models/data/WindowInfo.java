@@ -2,6 +2,7 @@ package com.cosmicdan.turboshell.models.data;
 
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinUserEx;
+import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import com.sun.jna.platform.win32.WinUser;
 import lombok.extern.log4j.Log4j2;
@@ -15,6 +16,8 @@ import java.util.EnumSet;
 @SuppressWarnings("WeakerAccess")
 @Log4j2
 public class WindowInfo {
+	public static final String NO_TITLE = "[NO TITLE]";
+
 	public enum Cache {USE, SKIP}
 
 	public enum Flag {
@@ -30,7 +33,7 @@ public class WindowInfo {
 	private String mTitle = null;
 
 	public WindowInfo(final HWND hWnd) {
-		mHWnd = hWnd;
+		mHWnd = User32Ex.INSTANCE.GetAncestor(hWnd, WinUser.GA_ROOTOWNER);
 		styleFlags = User32Ex.INSTANCE.GetWindowLongPtr(mHWnd, WinUser.GWL_STYLE).longValue();
 		styleExFlags = User32Ex.INSTANCE.GetWindowLongPtr(mHWnd, WinUser.GWL_EXSTYLE).longValue();
 	}
@@ -50,11 +53,9 @@ public class WindowInfo {
 			final int titleLength = User32Ex.INSTANCE.GetWindowTextLength(mHWnd) + 1;
 			final char[] title = new char[titleLength];
 			final int length = User32Ex.INSTANCE.GetWindowText(mHWnd, title, title.length);
-			String windowTitle = "[No title]";
+			String windowTitle = NO_TITLE;
 			if (0 < length)
 				windowTitle = new String(title);
-			// TODO: else set process name to title?
-			//log.info("Title refresh to '" + windowTitle + "'");
 			if ((null == mTitle) || (Cache.USE == cache))
 				mTitle = windowTitle;
 		}
@@ -81,11 +82,8 @@ public class WindowInfo {
 	public final boolean isRealWindow() {
 		boolean isReal = false;
 		if (!hasExStyle(WinUserEx.WS_EX_TOOLWINDOW)) {
-			if (isTopWindow()) {
-				if (hasStyle(WinUserEx.WS_EX_APPWINDOW) ||
-						(!hasParentWindow() && !hasExStyle(WinUserEx.WS_EX_NOACTIVATE))) {
-					isReal = true;
-				}
+			if (hasStyle(WinUserEx.WS_EX_APPWINDOW) || (!hasExStyle(WinUserEx.WS_EX_NOACTIVATE))) {
+				isReal = true;
 			}
 		}
 		return isReal;
@@ -125,7 +123,7 @@ public class WindowInfo {
 	private boolean canMaximize() {
 		return (canResize() && hasResizeButton());
 	}
-
+/*
 	private boolean isTopWindow() {
 		return mHWnd.equals(getTopWindow());
 	}
@@ -141,7 +139,7 @@ public class WindowInfo {
 	private HWND getParentWindow() {
 		return User32Ex.INSTANCE.GetWindow(mHWnd, WinUser.GW_OWNER);
 	}
-
+*/
 	private boolean hasStyle(final long windowStyle) {
 		return windowStyle == (styleFlags & windowStyle);
 	}

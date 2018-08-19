@@ -138,7 +138,7 @@ public class TurboBarView implements ITurboBarView {
 		coreControls.add(sysBtnClose);
 
 		//////////////////////////////////////////////////////////////
-		// TirboBar controls done, add them to the stage
+		// TurboBar controls done, add them to the stage
 		//////////////////////////////////////////////////////////////
 		pane.getChildren().addAll(coreControls);
 	}
