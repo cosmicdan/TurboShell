@@ -20,8 +20,6 @@ import com.sun.jna.ptr.IntByReference;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
-import java.awt.*;
-
 /**
  * Agent model for hooking and responding to WinEvents on the system, and also initiates windows-related events triggered by a
  * Presenter. Callbacks are processed in its own thread.
@@ -208,10 +206,32 @@ public final class WinEventAgent extends AgentModel {
 	// Presenter-requested actions (i.e. user-invoked)
 	//////////////////////////////////////////////////////////////
 
+	public void activateLastMaximizedWindow() {
+		log.info("Doing last maximized window");
+		for (int i = INSTANCE.foregroundWindows.size() - 1; -1 < i; i--) {
+			WindowInfo windowInfo = INSTANCE.foregroundWindows.get(i);
+			if (windowInfo.isMaximized()) {
+				User32Ex.INSTANCE.SetForegroundWindow(windowInfo.getHWnd());
+				break;
+			}
+		}
+	}
+
+	public void activateFirstMaximizedWindow() {
+		log.info("Doing first maximized window");
+		for (WindowInfo windowInfo : INSTANCE.foregroundWindows) {
+			if (windowInfo.isMaximized()) {
+				User32Ex.INSTANCE.SetForegroundWindow(windowInfo.getHWnd());
+				break;
+			}
+		}
+	}
+
 	/**
 	 * Perform minimize on the foreground window.
 	 */
 	public void minimizeForeground() {
+		// TODO: Test that the window is valid (e.g. Discord after minimizing it to tray)
 		if (!foregroundWindows.isEmpty()) {
 			User32Ex.INSTANCE.ShowWindowAsync(foregroundWindows.peek().getHWnd(), WinUser.SW_MINIMIZE);
 		}
@@ -221,6 +241,7 @@ public final class WinEventAgent extends AgentModel {
 	 * Perform resize (restore/maximize) on the foreground window.
 	 */
 	public void resizeForeground() {
+		// TODO: Test that the window is valid (e.g. Discord after minimizing it to tray)
 		if (!foregroundWindows.isEmpty()) {
 			final WindowInfo foregroundWindow = foregroundWindows.peek();
 			User32Ex.INSTANCE.ShowWindowAsync(foregroundWindow.getHWnd(),
@@ -232,6 +253,7 @@ public final class WinEventAgent extends AgentModel {
 	 * Politely close the foreground window.
 	 */
 	public void closeForeground() {
+		// TODO: Test that the window is valid (e.g. Discord after minimizing it to tray)
 		if (!foregroundWindows.isEmpty()) {
 			// CRASHES! Issue reported - https://github.com/java-native-access/jna/issues/905
 			//	- Not really a big deal, this doesn't need to be especially fast. Just use interface mapping.

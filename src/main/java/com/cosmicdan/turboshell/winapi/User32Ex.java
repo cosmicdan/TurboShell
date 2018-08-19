@@ -74,6 +74,8 @@ public final class User32Ex {
 	/** See {@link User32#GetWindowText} */
 	public native int GetWindowText(HWND hWnd, char[] lpString, int nMaxCount);
 
+	/** Brings the thread that created the specified window into the foreground and activates the window */
+	public native boolean SetForegroundWindow(HWND hWnd);
 
 
 

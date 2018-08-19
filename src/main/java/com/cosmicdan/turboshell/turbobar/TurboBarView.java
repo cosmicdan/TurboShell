@@ -7,6 +7,7 @@ import com.cosmicdan.turboshell.models.TurboShellConfig;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
 import com.cosmicdan.turboshell.turbobar.TurboBarPresenter.SysBtnAction;
+import com.cosmicdan.turboshell.turbobar.TurboBarPresenter.SystemAction;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -72,6 +73,9 @@ public class TurboBarView implements ITurboBarView {
 		refreshSize(xPos, width, barHeight);
 		mPrimaryStage.setAlwaysOnTop(true);
 		setupCoreControls(barHeight);
+		scene.setOnMouseClicked((MouseEvent event) -> {
+			SystemAction.ACTIVATE_LAST_MAXIMIZED.invoke(mPresenter, event);
+		});
 	}
 
 	@Override

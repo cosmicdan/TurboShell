@@ -35,6 +35,8 @@ import com.sun.jna.platform.win32.WinDef.WPARAM;
 import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.WinUser.WindowProc;
 import javafx.event.Event;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import lombok.extern.log4j.Log4j2;
 
 import java.net.URL;
@@ -266,7 +268,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 
 
 	//////////////////////////////////////////////////////////////
-	// Model/agent-sourced or locally-logic (e.g. reactions to environment changes)
+	// Model/agent-sourced or locally-sourced logic (e.g. reactions to environment changes)
 	//////////////////////////////////////////////////////////////
 
 	private void updateWindowTitle(final WindowTitleChangePayload payload) {
@@ -288,19 +290,32 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 
 	private void updateDateTime(final CalendarChangePayload payload) {
 		turboBarView.updateDateTime(String.format("%d-%02d-%02d", payload.getYearNum(), payload.getMonthNum(), payload.getDayNum()));
-
-		/*
-		turboBarView.updateDateTime(payload.getYearNum() + '-' + String.format("%02d", payload.getMonthNum()) + '-' + String.format("%02d", payload.getDayNum()));
-
-
-		log.info("Got calendar update: {}-{}-{}",
-				payload.getYearNum(), String.format("%02d", payload.getMonthNum()), String.format("%02d", payload.getDayNum()));
-*/
 	}
 
 	//////////////////////////////////////////////////////////////
 	// View-sourced logic (i.e. user-invoked actions)
 	//////////////////////////////////////////////////////////////
+
+
+	enum SystemAction implements ViewAction {
+		ACTIVATE_LAST_MAXIMIZED((ITurboBarPresenter presenter, Event event) -> {
+			if (((MouseEvent) event).getButton().equals(MouseButton.PRIMARY))
+				WinEventAgent.INSTANCE.activateLastMaximizedWindow();
+			else
+				WinEventAgent.INSTANCE.activateFirstMaximizedWindow();
+		});
+
+		private final ViewAction mViewAction;
+
+		SystemAction(final ViewAction viewAction) {
+			mViewAction = viewAction;
+		}
+
+		@Override
+		public void invoke(final ITurboBarPresenter presenter, final Event event) {
+			mViewAction.invoke(presenter, event);
+		}
+	}
 
 	/**
 	 * SysButton actions
