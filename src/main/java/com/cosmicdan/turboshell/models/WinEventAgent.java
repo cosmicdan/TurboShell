@@ -153,8 +153,8 @@ public final class WinEventAgent extends AgentModel {
 			if (!INSTANCE.foregroundWindows.isEmpty() &&
 					foregroundWindowInfo.getHWnd().equals(newWindowInfo.getHWnd())) {
 				// set new title
-				// TODO: Cache the title and only post if it's actually changed
-				INSTANCE.runCallbacks(new WindowTitleChangePayload(foregroundWindowInfo.getTitle()));
+				INSTANCE.runCallbacks(new WindowTitleChangePayload(newWindowInfo.getTitle()));
+				addOrUpdateWindowStack(newWindowInfo);
 			}
 		});
 
@@ -207,7 +207,6 @@ public final class WinEventAgent extends AgentModel {
 	//////////////////////////////////////////////////////////////
 
 	public void activateLastMaximizedWindow() {
-		log.info("Doing last maximized window");
 		for (int i = INSTANCE.foregroundWindows.size() - 1; -1 < i; i--) {
 			WindowInfo windowInfo = INSTANCE.foregroundWindows.get(i);
 			if (windowInfo.isMaximized()) {
@@ -218,7 +217,6 @@ public final class WinEventAgent extends AgentModel {
 	}
 
 	public void activateFirstMaximizedWindow() {
-		log.info("Doing first maximized window");
 		for (WindowInfo windowInfo : INSTANCE.foregroundWindows) {
 			if (windowInfo.isMaximized()) {
 				User32Ex.INSTANCE.SetForegroundWindow(windowInfo.getHWnd());

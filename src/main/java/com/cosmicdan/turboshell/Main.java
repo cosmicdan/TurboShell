@@ -32,7 +32,8 @@ public final class Main {
 			log.info("Starting TurboShell...");
 
 			final ITurboBarView turboBarView = new TurboBarView(primaryStage);
-			final ITurboBarPresenter turboBarPresenter = new TurboBarPresenter().setup(turboBarView);
+			//final ITurboBarPresenter turboBarPresenter = new TurboBarPresenter().setup(turboBarView);
+			new TurboBarPresenter().setup(turboBarView);
 		}
 	}
 }

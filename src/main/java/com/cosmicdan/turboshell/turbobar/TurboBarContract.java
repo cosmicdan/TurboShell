@@ -15,10 +15,11 @@ public interface TurboBarContract {
 	interface ITurboBarView {
 		void setPresenter(ITurboBarPresenter presenter);
 		void setup(int xPos, int width, int barHeight, String css, String windowName);
-		void refreshSize(final int xPos, final int width, final int barHeight);
+		void redraw(final int xPos, final int width, final int barHeight);
 		void updateSysBtnMinimize(SysBtnMinimizeState toState);
 		void updateSysBtnResize(SysBtnResizeState toState);
-		void updateDateTime(String date);
+		void updateDateTime(String dateTime);
+		void updateWindowTitle(String windowTitle);
 	}
 
 	@SuppressWarnings("CyclicClassDependency")

@@ -6,6 +6,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -51,11 +52,16 @@ class TurboBarControlFactory {
 	}
 
 	Label newLabel() {
+		return newLabel(Pos.CENTER_LEFT);
+	}
+
+	Label newLabel(final Pos position) {
 		Label label = new Label();
 		label.setTextFill(Color.web(TurboShellConfig.getTextColorMain()));
 		label.setFont(Font.font("Consolas", 11));
 		label.setPadding(new Insets(5));
 		label.setOpacity(1.0);
+		label.setAlignment(position);
 		return label;
 	}
 

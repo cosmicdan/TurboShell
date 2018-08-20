@@ -109,7 +109,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		);
 
 		// we need to re-set the size and position after setting window styles (JavaFX workaround)
-		turboBarView.refreshSize(workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight);
+		turboBarView.redraw(workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight);
 
 		// setup the appbar...
 		appBarData = setupAppbar(workAreaXAndWidth, turboBarHeight);
@@ -272,7 +272,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	//////////////////////////////////////////////////////////////
 
 	private void updateWindowTitle(final WindowTitleChangePayload payload) {
-		log.info("Got window title update: {}", payload.getWindowTitle());
+		turboBarView.updateWindowTitle(payload.getWindowTitle());
 	}
 
 	private void updateSysBtns(final WindowSysBtnUpdatePayload payload) {

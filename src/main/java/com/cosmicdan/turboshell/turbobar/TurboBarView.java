@@ -9,6 +9,8 @@ import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
 import com.cosmicdan.turboshell.turbobar.TurboBarPresenter.SysBtnAction;
 import com.cosmicdan.turboshell.turbobar.TurboBarPresenter.SystemAction;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -24,7 +26,7 @@ import javafx.util.Duration;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.List;
 
 /**
  * TurboBar view
@@ -44,11 +46,22 @@ public class TurboBarView implements ITurboBarView {
 
 	private ITurboBarPresenter mPresenter = null;
 
+	// cached values passed in from presenter (environment)
+	private int barWidth = 0;
+
+	// Controls
+	// We re-use this collection during runtime for modifying positioning
+	private final List<Region> coreControls = new ArrayList<>(10);
+	private static Region centerPaddingLeft = null;
+	private static Region centerPaddingLeftAdjuster = null; // Grows as calculated to keep title centered
+	private static Label windowTitleLbl = null;
+	private static final double windowTitleMaxWidthDivisor = 2.0; // title bar can take up max of a half of bar/screen width total
+	private static Region centerPaddingRight = null;
+	private static Region centerPaddingRightAdjuster = null; // Grows as calculated to keep title centered
+	private static Label dateTimeLbl = null;
 	private static AdaptiveButton sysBtnMinimize = null;
 	private static AdaptiveButton sysBtnResize = null;
 	private static AdaptiveButton sysBtnClose = null;
-
-	private static Label dateTime = null;
 
 	public TurboBarView(final Stage primaryStage) {
 		mPrimaryStage = primaryStage;
@@ -64,44 +77,72 @@ public class TurboBarView implements ITurboBarView {
 
 	@Override
 	public final void setup(final int xPos, final int width, final int barHeight, final String css, final String windowName) {
+		// TODO: This will need to be called again if the environment changes (resolution, startbar position, etc)
 		// initial stage setup
 		final Scene scene = new Scene(pane, width, barHeight);
 		scene.getStylesheets().add(css);
 		mPrimaryStage.initStyle(StageStyle.UTILITY);
 		mPrimaryStage.setScene(scene);
 		mPrimaryStage.setTitle(windowName);
-		refreshSize(xPos, width, barHeight);
 		mPrimaryStage.setAlwaysOnTop(true);
-		setupCoreControls(barHeight);
+		// add action for click on TurboBar itself
 		scene.setOnMouseClicked((MouseEvent event) -> {
 			SystemAction.ACTIVATE_LAST_MAXIMIZED.invoke(mPresenter, event);
 		});
+		redraw(xPos, width, barHeight);
 	}
 
 	@Override
-	public final void refreshSize(final int xPos, final int width, final int barHeight) {
-		mPrimaryStage.setWidth(width);
-		mPrimaryStage.setHeight(barHeight);
-		mPrimaryStage.setX(xPos);
+	public final void redraw(final int newXPos, final int newBarWidth, final int newBarHeight) {
+		barWidth = newBarWidth;
+		setupCoreControls(newBarHeight);
+		mPrimaryStage.setWidth(newBarWidth);
+		mPrimaryStage.setHeight(newBarHeight);
+		mPrimaryStage.setX(newXPos);
 		mPrimaryStage.setY(0);
 		mPrimaryStage.show();
 	}
 
 	@SuppressWarnings({"AssignmentToStaticFieldFromInstanceMethod", "FeatureEnvy"})
 	private void setupCoreControls(final int barHeight) {
-		// Build the list of controls that we're going to add
-		final Collection<Region> coreControls = new ArrayList<>(10);
+		// remove all existing controls, if any
+		pane.getChildren().removeAll(coreControls);
+		coreControls.clear();
+
 		// Start a new controls factory
 		final TurboBarControlFactory factory = new TurboBarControlFactory(getClass(), barHeight);
 
 		//////////////////////////////////////////////////////////////
-		// Center padding (for right alignment)
+		// Center-left padding (for center alignment of title)
 		//////////////////////////////////////////////////////////////
-		coreControls.add(factory.newCenterPaddingRegion());
+		centerPaddingLeft = factory.newCenterPaddingRegion();
+		coreControls.add(centerPaddingLeft);
+		// Grows as calculated to keep title centered
+		centerPaddingLeftAdjuster = factory.newCenterPaddingRegion();
+		centerPaddingLeftAdjuster.setMinWidth(Region.USE_PREF_SIZE);
+		centerPaddingLeftAdjuster.setMaxWidth(Region.USE_PREF_SIZE);
+		coreControls.add(centerPaddingLeftAdjuster);
+
+		// Current Window title
+		windowTitleLbl = factory.newLabel(Pos.CENTER);
+		coreControls.add(windowTitleLbl);
+
+		//////////////////////////////////////////////////////////////
+		// Center-right padding (for center alignment of title, and right-aligned controls)
+		//////////////////////////////////////////////////////////////
+		// Grows as calculated to keep title centered
+		centerPaddingRightAdjuster = factory.newCenterPaddingRegion();
+		centerPaddingRightAdjuster.setMinWidth(Region.USE_PREF_SIZE);
+		centerPaddingRightAdjuster.setMaxWidth(Region.USE_PREF_SIZE);
+		coreControls.add(centerPaddingRightAdjuster);
+		centerPaddingRight = factory.newCenterPaddingRegion();
+		coreControls.add(centerPaddingRight);
 
 		// Date
-		dateTime = factory.newLabel();
-		coreControls.add(dateTime);
+		dateTimeLbl = factory.newLabel(Pos.CENTER);
+		// always try to fit
+		dateTimeLbl.setMinWidth(Region.USE_PREF_SIZE);
+		coreControls.add(dateTimeLbl);
 
 		// Separator
 		coreControls.add(factory.newVerticalSeparator());
@@ -142,9 +183,42 @@ public class TurboBarView implements ITurboBarView {
 		coreControls.add(sysBtnClose);
 
 		//////////////////////////////////////////////////////////////
-		// TurboBar controls done, add them to the stage
+		// TurboBar controls done, add barWidth change listener then add them all to the stage
 		//////////////////////////////////////////////////////////////
 		pane.getChildren().addAll(coreControls);
+		final ChangeListener<Number> changeListener =
+				(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> updateTitlePaddingAdjusters();
+		for (final Region childControl : coreControls) {
+			childControl.widthProperty().addListener(changeListener);
+		}
+	}
+
+	private void updateTitlePaddingAdjusters() {
+		// abort if all the controls are not ready
+		if (coreControls.isEmpty())
+			return;
+
+		// calculate which adjuster needs to be enlarged so the title stays centered
+		final int leftPaddingIndex = coreControls.indexOf(centerPaddingLeft);
+		final int rightPaddingIndex = coreControls.indexOf(centerPaddingRight);
+		double controlsWidthLeft = 0.0;
+		double controlsWidthRight = 0.0;
+		for (int i = 0; i < coreControls.size(); i++) {
+			if (i < leftPaddingIndex) {
+				controlsWidthLeft += coreControls.get(i).getWidth();
+			} else if (i > rightPaddingIndex) {
+				controlsWidthRight += coreControls.get(i).getWidth();
+			}
+		}
+
+		centerPaddingLeftAdjuster.setPrefWidth(0);
+		centerPaddingRightAdjuster.setPrefWidth(0);
+
+		if (controlsWidthRight > controlsWidthLeft) {
+			centerPaddingLeftAdjuster.setPrefWidth(controlsWidthRight);
+		} else {
+			centerPaddingRightAdjuster.setPrefWidth(controlsWidthRight);
+		}
 	}
 
 	/**
@@ -190,7 +264,7 @@ public class TurboBarView implements ITurboBarView {
 			if (SysBtnResizeState.RESTORE == toState) {
 				sysBtnResize.setImageViewIndex(1);
 			} else {
-				// set it to "maximuze" graphic by default
+				// set it to "maximize" graphic by default
 				sysBtnResize.setImageViewIndex(0);
 			}
 			// set disabled/enabled
@@ -199,9 +273,17 @@ public class TurboBarView implements ITurboBarView {
 	}
 
 	@Override
-	public void updateDateTime(final String date) {
-		log.info(date);
-		dateTime.setText(date);
+	public final void updateDateTime(final String dateTime) {
+		log.info(dateTime);
+		Platform.runLater(() -> dateTimeLbl.setText(dateTime));
+	}
+
+	@Override
+	public final void updateWindowTitle(String windowTitle) {
+		if (!windowTitleLbl.getText().equals(windowTitle)) {
+			//log.info("Got window title update: {}", windowTitle);
+			Platform.runLater(() -> windowTitleLbl.setText(windowTitle));
+		}
 	}
 
 
