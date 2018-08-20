@@ -1,4 +1,4 @@
-package com.cosmicdan.turboshell.models.data;
+package com.cosmicdan.turboshell.winapi.model;
 
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinUserEx;

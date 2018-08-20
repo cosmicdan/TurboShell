@@ -1,4 +1,4 @@
-package com.cosmicdan.turboshell.models.payloads;
+package com.cosmicdan.turboshell.common.model.payload;
 
 import lombok.Data;
 

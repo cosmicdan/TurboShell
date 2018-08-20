@@ -1,5 +1,6 @@
-package com.cosmicdan.turboshell.gui;
+package com.cosmicdan.turboshell.turbobar.animation;
 
+import com.cosmicdan.turboshell.common.control.AdaptiveButton;
 import javafx.animation.Transition;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -20,12 +21,12 @@ public class KillCountdownProgress extends Transition {
 	private final String mColorHex;
 	private final AnimationDirection mAnimDirection;
 
-	public KillCountdownProgress(final Duration duration, final AdaptiveButton ctrlCloseButton, final String colorHex, final AnimationDirection animDirection) {
+	public KillCountdownProgress(final Duration duration, final AdaptiveButton ctrlCloseButton, final String colorHex, final boolean animDirection) {
 		setDuration(duration);
 		setCycleDuration(duration);
 		mCtrlCloseButton = ctrlCloseButton;
 		mColorHex = colorHex;
-		mAnimDirection = animDirection;
+		mAnimDirection = animDirection ? AnimationDirection.REVERSE : AnimationDirection.NORMAL;
 	}
 
 	@Override

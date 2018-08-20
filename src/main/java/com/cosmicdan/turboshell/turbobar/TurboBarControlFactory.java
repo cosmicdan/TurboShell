@@ -1,7 +1,7 @@
 package com.cosmicdan.turboshell.turbobar;
 
-import com.cosmicdan.turboshell.gui.AdaptiveButton;
-import com.cosmicdan.turboshell.models.TurboShellConfig;
+import com.cosmicdan.turboshell.common.control.AdaptiveButton;
+import com.cosmicdan.turboshell.TurboShellConfig;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -14,7 +14,7 @@ import javafx.scene.text.Font;
 import lombok.extern.log4j.Log4j2;
 
 /**
- * Main factory for creating TurboBar controls
+ * Main factory for creating TurboBar control
  * @author Daniel 'CosmicDan' Connolly
  */
 
@@ -29,7 +29,7 @@ class TurboBarControlFactory {
 	}
 
 	/**
-	 * @return An auto-stretch region for HBox children, providing right-aligned controls for anything that follows.
+	 * @return An auto-stretch region for HBox children, providing right-aligned control for anything that follows.
 	 */
 	Region newCenterPaddingRegion() {
 		final Region centerPadding = new Region();

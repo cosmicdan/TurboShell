@@ -1,4 +1,4 @@
-package com.cosmicdan.turboshell.models;
+package com.cosmicdan.turboshell;
 
 import lombok.Getter;
 import lombok.experimental.UtilityClass;

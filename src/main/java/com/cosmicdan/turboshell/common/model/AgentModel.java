@@ -1,6 +1,6 @@
-package com.cosmicdan.turboshell.models;
+package com.cosmicdan.turboshell.common.model;
 
-import com.cosmicdan.turboshell.models.payloads.IPayload;
+import com.cosmicdan.turboshell.common.model.payload.IPayload;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.Collection;
@@ -17,8 +17,6 @@ import java.util.Set;
 public abstract class AgentModel implements Runnable {
 	private final Object callbackLock = new Object();
 	private Set<CallbackReceiverEntry<IPayload>> mCallbacks = null;
-
-	AgentModel() {}
 
 	///////////////////
 	// Thread related things
@@ -81,9 +79,9 @@ public abstract class AgentModel implements Runnable {
 	}
 
 	@SuppressWarnings("MethodWithMultipleLoops")
-	final void runCallbacks(final IPayload payload) {
+	protected final void runCallbacks(final IPayload payload) {
 		final Collection<CallbackReceiverEntry<IPayload>> callbacksCopy;
-		// first we copy the relevent payloads to a new hashmap since we don't want to run each callback with a thread lock held
+		// first we copy the relevent payload to a new hashmap since we don't want to run each callback with a thread lock held
 		synchronized(callbackLock) {
 			callbacksCopy = new HashSet<>(mCallbacks.size());
 			for (final CallbackReceiverEntry<IPayload> callback : mCallbacks) {

@@ -1,15 +1,15 @@
 package com.cosmicdan.turboshell.turbobar;
 
-import com.cosmicdan.turboshell.models.AgentModel.PayloadCallback;
-import com.cosmicdan.turboshell.models.CalendarAgent;
-import com.cosmicdan.turboshell.models.TurboShellConfig;
-import com.cosmicdan.turboshell.models.WinEventAgent;
-import com.cosmicdan.turboshell.models.WinEventAgent.KillForegroundHardness;
-import com.cosmicdan.turboshell.models.WindowsEnvironment;
-import com.cosmicdan.turboshell.models.data.WindowInfo.Flag;
-import com.cosmicdan.turboshell.models.payloads.CalendarChangePayload;
-import com.cosmicdan.turboshell.models.payloads.WindowSysBtnUpdatePayload;
-import com.cosmicdan.turboshell.models.payloads.WindowTitleChangePayload;
+import com.cosmicdan.turboshell.common.model.AgentModel.PayloadCallback;
+import com.cosmicdan.turboshell.common.model.CalendarAgent;
+import com.cosmicdan.turboshell.TurboShellConfig;
+import com.cosmicdan.turboshell.winapi.model.WinEventAgent;
+import com.cosmicdan.turboshell.winapi.model.WinEventAgent.KillForegroundHardness;
+import com.cosmicdan.turboshell.winapi.model.WindowsEnvironment;
+import com.cosmicdan.turboshell.winapi.model.WindowInfo.Flag;
+import com.cosmicdan.turboshell.common.model.payload.CalendarChangePayload;
+import com.cosmicdan.turboshell.common.model.payload.WindowSysBtnUpdatePayload;
+import com.cosmicdan.turboshell.common.model.payload.WindowTitleChangePayload;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
 import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnMinimizeState;
@@ -295,7 +295,22 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	//////////////////////////////////////////////////////////////
 	// View-sourced logic (i.e. user-invoked actions)
 	//////////////////////////////////////////////////////////////
+	enum MainButtonAction implements ViewAction {
+		TURBO_MENU((ITurboBarPresenter presenter, Event event) -> {
 
+		});
+
+		private final ViewAction mViewAction;
+
+		MainButtonAction(final ViewAction viewAction) {
+			mViewAction = viewAction;
+		}
+
+		@Override
+		public void invoke(final ITurboBarPresenter presenter, final Event event) {
+			mViewAction.invoke(presenter, event);
+		}
+	}
 
 	enum SystemAction implements ViewAction {
 		ACTIVATE_LAST_MAXIMIZED((ITurboBarPresenter presenter, Event event) -> {

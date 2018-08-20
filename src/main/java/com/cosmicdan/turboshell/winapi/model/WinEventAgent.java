@@ -1,9 +1,9 @@
-package com.cosmicdan.turboshell.models;
+package com.cosmicdan.turboshell.winapi.model;
 
-import com.cosmicdan.turboshell.models.data.SizedStack;
-import com.cosmicdan.turboshell.models.data.WindowInfo;
-import com.cosmicdan.turboshell.models.payloads.WindowSysBtnUpdatePayload;
-import com.cosmicdan.turboshell.models.payloads.WindowTitleChangePayload;
+import com.cosmicdan.turboshell.common.model.AgentModel;
+import com.cosmicdan.turboshell.common.model.SizedStack;
+import com.cosmicdan.turboshell.common.model.payload.WindowSysBtnUpdatePayload;
+import com.cosmicdan.turboshell.common.model.payload.WindowTitleChangePayload;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinUserEx;
 import com.sun.jna.platform.win32.Kernel32;
@@ -39,8 +39,6 @@ public final class WinEventAgent extends AgentModel {
 	private HANDLE hookLocationChange = null;
 	private HANDLE hookNameChange = null;
 	private HANDLE hookForegroundChange = null;
-
-	private WinEventAgent() {}
 
 	@SuppressWarnings("FeatureEnvy")
 	@Override

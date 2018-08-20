@@ -1,13 +1,12 @@
 package com.cosmicdan.turboshell.turbobar;
 
-import com.cosmicdan.turboshell.gui.AdaptiveButton;
-import com.cosmicdan.turboshell.gui.KillCountdownProgress;
-import com.cosmicdan.turboshell.gui.KillCountdownProgress.AnimationDirection;
-import com.cosmicdan.turboshell.models.TurboShellConfig;
+import com.cosmicdan.turboshell.TurboShellConfig;
+import com.cosmicdan.turboshell.common.control.AdaptiveButton;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
 import com.cosmicdan.turboshell.turbobar.TurboBarPresenter.SysBtnAction;
 import com.cosmicdan.turboshell.turbobar.TurboBarPresenter.SystemAction;
+import com.cosmicdan.turboshell.turbobar.animation.KillCountdownProgress;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -231,8 +230,7 @@ public class TurboBarView implements ITurboBarView {
 		final boolean isPrimaryClick = MouseButton.PRIMARY == mouseButton;
 		final String colorHex = isPrimaryClick ? TurboShellConfig.getTurboBarCloseBgPrimary() : TurboShellConfig.getTurboBarCloseBgSecondary();
 
-		final KillCountdownProgress holdTimer = new KillCountdownProgress(holdTime, sysBtnClose, colorHex,
-				isPrimaryClick ? AnimationDirection.REVERSE : AnimationDirection.NORMAL);
+		final KillCountdownProgress holdTimer = new KillCountdownProgress(holdTime, sysBtnClose, colorHex, isPrimaryClick);
 		holdTimer.setOnFinished((ActionEvent event) -> handler.handle(mouseEvent[0]));
 
 		node.addEventHandler(MouseEvent.MOUSE_PRESSED, (MouseEvent event) -> {

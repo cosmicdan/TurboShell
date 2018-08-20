@@ -1,4 +1,4 @@
-package com.cosmicdan.turboshell.gui;
+package com.cosmicdan.turboshell.common.control;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;

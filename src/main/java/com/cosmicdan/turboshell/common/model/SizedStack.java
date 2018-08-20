@@ -1,4 +1,4 @@
-package com.cosmicdan.turboshell.models.data;
+package com.cosmicdan.turboshell.common.model;
 
 import java.util.Collection;
 import java.util.Stack;

@@ -1,5 +1,6 @@
-package com.cosmicdan.turboshell.models;
+package com.cosmicdan.turboshell.winapi.model;
 
+import com.cosmicdan.turboshell.TurboShellConfig;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.sun.jna.Native;
 import com.sun.jna.platform.win32.User32;

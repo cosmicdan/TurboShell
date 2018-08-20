@@ -1,6 +1,6 @@
-package com.cosmicdan.turboshell.models.payloads;
+package com.cosmicdan.turboshell.common.model.payload;
 
-import com.cosmicdan.turboshell.models.data.WindowInfo.Flag;
+import com.cosmicdan.turboshell.winapi.model.WindowInfo.Flag;
 import lombok.Getter;
 
 import java.util.EnumSet;

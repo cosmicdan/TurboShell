@@ -1,6 +1,6 @@
-package com.cosmicdan.turboshell.models;
+package com.cosmicdan.turboshell.common.model;
 
-import com.cosmicdan.turboshell.models.payloads.CalendarChangePayload;
+import com.cosmicdan.turboshell.common.model.payload.CalendarChangePayload;
 import lombok.extern.log4j.Log4j2;
 
 import java.time.LocalDateTime;
