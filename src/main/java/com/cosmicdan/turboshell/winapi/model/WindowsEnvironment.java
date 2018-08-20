@@ -18,7 +18,9 @@ import lombok.extern.log4j.Log4j2;
  */
 @UtilityClass
 @Log4j2(topic = "WindowsEnvironment")
-public final class WindowsEnvironment {
+public final class WindowsEnvironment extends User32Ex {
+	private static final int CLASS_NAME_CHAR_LENGTH = 512;
+
 	/**
 	 * Get the work area starting x-position and width
 	 * @return An int[] of two members:<br>
@@ -38,11 +40,11 @@ public final class WindowsEnvironment {
 
 	public static boolean isDesktopFocused() {
 		boolean isDesktop = false;
-		HWND foregroundHWnd = User32Ex.INSTANCE.GetForegroundWindow();
+		final HWND foregroundHWnd = USER32.GetForegroundWindow();
 
-		final char[] windowClassNameChar = new char[512];
-		User32Ex.INSTANCE.GetClassName(foregroundHWnd, windowClassNameChar, 512);
-		String windowClassName = Native.toString(windowClassNameChar);
+		final char[] windowClassNameChar = new char[CLASS_NAME_CHAR_LENGTH];
+		USER32.GetClassName(foregroundHWnd, windowClassNameChar, CLASS_NAME_CHAR_LENGTH);
+		final String windowClassName = Native.toString(windowClassNameChar);
 		if (TurboShellConfig.getFullscreenHideExcludeClasses().contains(windowClassName))
 			isDesktop = true;
 		return isDesktop;

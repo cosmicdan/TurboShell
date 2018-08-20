@@ -20,10 +20,13 @@ import lombok.extern.log4j.Log4j2;
 
 @Log4j2(topic = "TurboBarControlFactory")
 class TurboBarControlFactory {
-	private final int mTurboBarHeight;
-	private final Class<?> mSourceClass;
+	private int mTurboBarHeight;
+	private Class<?> mSourceClass;
 
-	TurboBarControlFactory(final Class<?> sourceClass, final int turboBarHeight) {
+	private static final String LABEL_FONT_NAME = "Consolas";
+	private static final int LABEL_FONT_SIZE = 11;
+
+	void setupFactory(final Class<?> sourceClass, final int turboBarHeight) {
 		mTurboBarHeight = turboBarHeight;
 		mSourceClass = sourceClass;
 	}
@@ -31,7 +34,7 @@ class TurboBarControlFactory {
 	/**
 	 * @return An auto-stretch region for HBox children, providing right-aligned control for anything that follows.
 	 */
-	Region newCenterPaddingRegion() {
+	Region newHboxPaddingRegion() {
 		final Region centerPadding = new Region();
 		HBox.setHgrow(centerPadding, Priority.ALWAYS);
 		return centerPadding;
@@ -41,27 +44,17 @@ class TurboBarControlFactory {
 		final Region separator = new Region();
 		separator.setMaxSize(1, Double.MAX_VALUE);
 		separator.setPrefSize(1, Double.MAX_VALUE);
-		HBox.setMargin(separator, new Insets(
-				TurboShellConfig.getTurboBarVerticalSeparatorMarginY(), TurboShellConfig.getTurboBarVerticalSeparatorMarginX(),
-				TurboShellConfig.getTurboBarVerticalSeparatorMarginY(), TurboShellConfig.getTurboBarVerticalSeparatorMarginX()));
-		separator.setBackground(new Background(new BackgroundFill(
-				Color.web(TurboShellConfig.getTurboBarVerticalSeparatorColor()), CornerRadii.EMPTY, Insets.EMPTY)));
-		separator.setOpacity(TurboShellConfig.getTurboBarVerticalSeparatorOpacity());
-
+		TurboShellConfig.styleTurboBarSeparator(separator);
 		return separator;
 	}
 
 	Label newLabel() {
-		return newLabel(Pos.CENTER_LEFT);
-	}
-
-	Label newLabel(final Pos position) {
-		Label label = new Label();
+		final Label label = new Label();
 		label.setTextFill(Color.web(TurboShellConfig.getTextColorMain()));
-		label.setFont(Font.font("Consolas", 11));
+		label.setFont(Font.font(LABEL_FONT_NAME, LABEL_FONT_SIZE));
 		label.setPadding(new Insets(5));
 		label.setOpacity(1.0);
-		label.setAlignment(position);
+		label.setAlignment(Pos.CENTER);
 		return label;
 	}
 

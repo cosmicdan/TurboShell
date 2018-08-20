@@ -24,10 +24,10 @@ public final class SizedStack<T> extends Stack<T> {
 		return super.push(item);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized SizedStack<T> clone() {
 		final SizedStack<T> clone = new SizedStack<>(mMaxSize);
+		//noinspection unchecked
 		clone.addAll((Collection<? extends T>) super.clone());
 		return clone;
 	}

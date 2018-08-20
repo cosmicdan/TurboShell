@@ -12,7 +12,7 @@ import lombok.extern.log4j.Log4j2;
  * TurboShell main entrypoint
  * @author Daniel 'CosmicDan' Connolly
  */
-@SuppressWarnings({"UtilityClass", "ClassWithTooManyTransitiveDependencies", "WeakerAccess"})
+@SuppressWarnings({"UtilityClass", "ClassWithTooManyTransitiveDependencies"})
 @Log4j2
 public final class Main {
 	private Main() {}
@@ -33,7 +33,8 @@ public final class Main {
 
 			final ITurboBarView turboBarView = new TurboBarView(primaryStage);
 			//final ITurboBarPresenter turboBarPresenter = new TurboBarPresenter().setup(turboBarView);
-			new TurboBarPresenter().setup(turboBarView);
+			final ITurboBarPresenter turboBarPresenter = new TurboBarPresenter();
+			turboBarPresenter.setup(turboBarView);
 		}
 	}
 }

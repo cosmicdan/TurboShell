@@ -12,10 +12,9 @@ import java.util.EnumSet;
  * A holder/wrapper for window styles, title name, and other interesting information
  * @author Daniel 'CosmicDan' Connolly
  */
-@SuppressWarnings("WeakerAccess")
 @Log4j2
-public class WindowInfo {
-	public static final String NO_TITLE = "[NO TITLE]";
+public class WindowInfo extends User32Ex {
+	private static final String NO_TITLE = "[NO TITLE]";
 
 	public enum Flag {
 		IS_MAXIMIZED,
@@ -30,9 +29,9 @@ public class WindowInfo {
 	private String mTitle = null;
 
 	public WindowInfo(final HWND hWnd) {
-		mHWnd = User32Ex.INSTANCE.GetAncestor(hWnd, WinUser.GA_ROOTOWNER);
-		styleFlags = User32Ex.INSTANCE.GetWindowLongPtr(mHWnd, WinUser.GWL_STYLE).longValue();
-		styleExFlags = User32Ex.INSTANCE.GetWindowLongPtr(mHWnd, WinUser.GWL_EXSTYLE).longValue();
+		mHWnd = USER32.GetAncestor(hWnd, WinUser.GA_ROOTOWNER);
+		styleFlags = USER32.GetWindowLongPtr(mHWnd, WinUser.GWL_STYLE).longValue();
+		styleExFlags = USER32.GetWindowLongPtr(mHWnd, WinUser.GWL_EXSTYLE).longValue();
 	}
 
 	public final HWND getHWnd() {
@@ -42,9 +41,9 @@ public class WindowInfo {
 	public String getTitle() {
 		if (null == mTitle) {
 			// get the title for the new window
-			final int titleLength = User32Ex.INSTANCE.GetWindowTextLength(mHWnd) + 1;
+			final int titleLength = USER32.GetWindowTextLength(mHWnd) + 1;
 			final char[] title = new char[titleLength];
-			final int length = User32Ex.INSTANCE.GetWindowText(mHWnd, title, title.length);
+			final int length = USER32.GetWindowText(mHWnd, title, title.length);
 			String windowTitle = NO_TITLE;
 			if (0 < length)
 				windowTitle = new String(title);
@@ -71,11 +70,11 @@ public class WindowInfo {
 		return isReal;
 	}
 
-	public final boolean canResize() {
+	private boolean canResize() {
 		return hasStyle(WinUser.WS_SIZEBOX);
 	}
 
-	public final boolean hasResizeButton() {
+	private boolean hasResizeButton() {
 		return hasStyle(WinUser.WS_MAXIMIZEBOX);
 	}
 
@@ -95,7 +94,7 @@ public class WindowInfo {
 	}
 
 	public boolean isVisible() {
-		return User32Ex.INSTANCE.IsWindowVisible(mHWnd);
+		return USER32.IsWindowVisible(mHWnd);
 	}
 
 	private boolean hasMinimizeButton() {

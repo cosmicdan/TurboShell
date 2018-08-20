@@ -3,6 +3,9 @@ package com.cosmicdan.turboshell.turbobar;
 import com.cosmicdan.turboshell.common.model.AgentModel.PayloadCallback;
 import com.cosmicdan.turboshell.common.model.CalendarAgent;
 import com.cosmicdan.turboshell.TurboShellConfig;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView.SysBtnCloseAction;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView.SysBtnMinimizeState;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView.SysBtnResizeState;
 import com.cosmicdan.turboshell.winapi.model.WinEventAgent;
 import com.cosmicdan.turboshell.winapi.model.WinEventAgent.KillForegroundHardness;
 import com.cosmicdan.turboshell.winapi.model.WindowsEnvironment;
@@ -12,8 +15,6 @@ import com.cosmicdan.turboshell.common.model.payload.WindowSysBtnUpdatePayload;
 import com.cosmicdan.turboshell.common.model.payload.WindowTitleChangePayload;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView;
-import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnMinimizeState;
-import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnResizeState;
 import com.cosmicdan.turboshell.winapi.ShellAPIEx;
 import com.cosmicdan.turboshell.winapi.User32Ex;
 import com.cosmicdan.turboshell.winapi.WinApiException;
@@ -47,9 +48,9 @@ import java.util.EnumSet;
  * view actions and models/agents.
  * @author Daniel 'CosmicDan' Connolly
  */
-@SuppressWarnings({"FieldCanBeLocal", "CyclicClassDependency", "ClassWithTooManyDependencies"})
+@SuppressWarnings("ClassWithTooManyDependencies")
 @Log4j2
-public class TurboBarPresenter implements ITurboBarPresenter {
+public class TurboBarPresenter extends User32Ex implements ITurboBarPresenter {
 	private static final String WINDOW_NAME = "TurboShell's TurboBar";
 	private static final int turboBarFlags = WinUser.SWP_NOMOVE | WinUser.SWP_NOSIZE | WinUser.SWP_NOACTIVATE;
 	private static final int WM_USER_APPBAR_CALLBACK = WinUser.WM_USER + 808;
@@ -59,6 +60,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 
 	// all callbacks as class fields to avoid GC
 	private APPBARDATA appBarData = null;
+	@SuppressWarnings("FieldCanBeLocal")
 	private TurboBarWinProcCallback winProcCallback = null;
 
 	// cached values to save unnecessary WinAPI calls
@@ -72,18 +74,26 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		return turboBarHWnd;
 	}
 
-	/*
 	@Override
-	public final ITurboBarView getTurboBarView() {
-		return turboBarView;
+	public final void setTopmost(final boolean topmost) {
+		if (topmost == mIsTopmost) // cache check to save API calls
+			return;
+		USER32.SetWindowPos(
+				turboBarHWnd,
+				topmost ? WinUserEx.HWND_TOPMOST : WinUserEx.HWND_BOTTOM,
+				0, 0, 0, 0, turboBarFlags
+		);
+		if (topmost) // Will put TurboBar above *other* topmost windows too. Might not be necessary but meh.
+			USER32.SetWindowPos(turboBarHWnd, WinUserEx.HWND_TOP , 0, 0, 0, 0, turboBarFlags);
+		mIsTopmost = topmost;
 	}
-	*/
 
-	@SuppressWarnings({"ReturnOfThis", "FeatureEnvy"})
-	public final ITurboBarPresenter setup(final ITurboBarView view) {
+	@SuppressWarnings("FeatureEnvy")
+	@Override
+	public final void setup(final ITurboBarView view) {
 		// gather data for building the initial TurboBar view...
 		final int turboBarHeight = TurboShellConfig.getTurboBarHeight();
-		final int[] workAreaXAndWidth = WindowsEnvironment.getWorkAreaXAndWidth();
+		final int[] workAreaXAndWidth = getWorkAreaXAndWidth();
 		final URL cssResources = getClass().getResource("TurboBar.css");
 		if (null == cssResources)
 			throw new RuntimeException("Could not load TurboBar.css!");
@@ -92,19 +102,18 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		final HWND initialTopHwnd = User32.INSTANCE.GetForegroundWindow();
 		// ...then create the JavaFX scene for TurboBar
 		turboBarView = view;
-		turboBarView.setup(workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight, css, WINDOW_NAME);
-		User32.INSTANCE.SetForegroundWindow(initialTopHwnd);
-		turboBarView.setPresenter(this);
+		turboBarView.setup(this, workAreaXAndWidth[0], workAreaXAndWidth[1], turboBarHeight, css, WINDOW_NAME);
+		USER32.SetForegroundWindow(initialTopHwnd);
 
 		// cache TurboBar's hWnd for future native operations
 		turboBarHWnd = new HWND();
 		turboBarHWnd.setPointer(new Pointer(Window.getWindows().get(0).getNativeWindow()));
 
 		// (JavaFX workaround) apply desired window styles to the TurboBar to make it "undecorated" and not appear on taskbar nor alt-tab
-		User32Ex.INSTANCE.SetWindowLongPtr(turboBarHWnd, WinUser.GWL_STYLE,
+		USER32.SetWindowLongPtr(turboBarHWnd, WinUser.GWL_STYLE,
 				Pointer.createConstant(WinUser.WS_VISIBLE | WinUser.WS_POPUP | WinUser.WS_CLIPCHILDREN)
 		);
-		User32Ex.INSTANCE.SetWindowLongPtr(turboBarHWnd, WinUser.GWL_EXSTYLE,
+		USER32.SetWindowLongPtr(turboBarHWnd, WinUser.GWL_EXSTYLE,
 				Pointer.createConstant(WinUserEx.WS_EX_NOACTIVATE | WinUserEx.WS_EX_TOOLWINDOW | WinUserEx.WS_EX_TOPMOST)
 		);
 
@@ -115,15 +124,29 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		appBarData = setupAppbar(workAreaXAndWidth, turboBarHeight);
 
 		// setup some models and register for observing
-		setupModelsAndObservers(initialTopHwnd);
+		// TODO: refactor this (feature envy). Don't forget to remove the SuppressWarnings annotation too.
+		WinEventAgent.INSTANCE.setInitialTopHwnd(initialTopHwnd);
+		// window title changes
+		WinEventAgent.INSTANCE.registerCallback(WindowTitleChangePayload.class,
+				(PayloadCallback<WindowTitleChangePayload>) this::updateWindowTitle);
+		// window sysbtn control updates
+		WinEventAgent.INSTANCE.registerCallback(WindowSysBtnUpdatePayload.class,
+				(PayloadCallback<WindowSysBtnUpdatePayload>) this::updateSysBtns);
+		WinEventAgent.INSTANCE.start();
+		// Calendar
+		CalendarAgent.INSTANCE.registerCallback(CalendarChangePayload.class,
+				(PayloadCallback<CalendarChangePayload>) this::updateDateTime);
+		CalendarAgent.INSTANCE.start();
 
 		// finally, add a shutdown hook to cleanup
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			log.info("TurboBar shutdown...");
 			Shell32.INSTANCE.SHAppBarMessage(new DWORD(ShellAPI.ABM_REMOVE), appBarData);
 		}));
+	}
 
-		return this;
+	private static int[] getWorkAreaXAndWidth() {
+		return WindowsEnvironment.getWorkAreaXAndWidth();
 	}
 
 	/**
@@ -152,9 +175,9 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 			throw new RuntimeException("Error registering TurboBar with SHAppBarMessage!");
 		}
 		// ...and its callback
-		final LONG_PTR turboBarWinProcBase = User32Ex.INSTANCE.GetWindowLongPtr(turboBarHWnd, WinUser.GWL_WNDPROC);
+		final LONG_PTR turboBarWinProcBase = USER32.GetWindowLongPtr(turboBarHWnd, WinUser.GWL_WNDPROC);
 		winProcCallback = new TurboBarWinProcCallback(turboBarWinProcBase, this);
-		final LONG_PTR appBarCallbackResult = User32Ex.INSTANCE.SetWindowLongPtr(
+		final LONG_PTR appBarCallbackResult = USER32.SetWindowLongPtr(
 				turboBarHWnd, WinUser.GWL_WNDPROC, winProcCallback);
 		if (0 == appBarCallbackResult.longValue()) {
 			throw new WinApiException("Error setting TurboBar appbar callback!");
@@ -162,45 +185,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		return appBarData;
 	}
 
-	/**
-	 * Setup models/agents that this Presenter will be communicating with.
-	 * @param initialTopHwnd The initial foreground hWnd that was retrieved on TurboShell startup, so it can be re-activated after
-	 *                       TurboShell steals focus
-	 */
-	@SuppressWarnings("FeatureEnvy")
-	private void setupModelsAndObservers(final HWND initialTopHwnd) {
-		WinEventAgent.INSTANCE.setInitialTopHwnd(initialTopHwnd);
 
-		// window title changes
-		WinEventAgent.INSTANCE.registerCallback(WindowTitleChangePayload.class,
-				(PayloadCallback<WindowTitleChangePayload>) this::updateWindowTitle);
-
-		// window sysbtn control updates
-		WinEventAgent.INSTANCE.registerCallback(WindowSysBtnUpdatePayload.class,
-				(PayloadCallback<WindowSysBtnUpdatePayload>) this::updateSysBtns);
-
-		WinEventAgent.INSTANCE.start();
-
-		// Calendar
-		CalendarAgent.INSTANCE.registerCallback(CalendarChangePayload.class,
-				(PayloadCallback<CalendarChangePayload>) this::updateDateTime);
-
-		CalendarAgent.INSTANCE.start();
-	}
-
-	@Override
-	public final void setTopmost(final boolean topmost) {
-		if (topmost == mIsTopmost) // cache check to save API calls
-			return;
-		User32Ex.INSTANCE.SetWindowPos(
-				turboBarHWnd,
-				topmost ? WinUserEx.HWND_TOPMOST : WinUserEx.HWND_BOTTOM,
-				0, 0, 0, 0, turboBarFlags
-		);
-		if (topmost) // Will put TurboBar above *other* topmost windows too. Might not be necessary but meh.
-			User32Ex.INSTANCE.SetWindowPos(turboBarHWnd, WinUserEx.HWND_TOP , 0, 0, 0, 0, turboBarFlags);
-		mIsTopmost = topmost;
-	}
 
 	//////////////////////////////////////////////////////////////
 	// Self-managed logic - AppBar messages from environment
@@ -209,6 +194,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	/**
 	 * Shared callback for AppBar events
 	 */
+	@SuppressWarnings("CyclicClassDependency")
 	private static class TurboBarWinProcCallback implements WindowProc {
 		// Store the original window procedure for chain-calling it
 		private final LONG_PTR mTurboBarWinProcBase;
@@ -231,7 +217,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 				}
 			}
 			// pass it on...
-			return User32Ex.INSTANCE.CallWindowProc(mTurboBarWinProcBase.toPointer(), mTurboBarPresenter.getTurboBarHWnd(), uMsg, wParam, lParam);
+			return USER32.CallWindowProc(mTurboBarWinProcBase.toPointer(), mTurboBarPresenter.getTurboBarHWnd(), uMsg, wParam, lParam);
 		}
 	}
 
@@ -240,7 +226,7 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 	 */
 	@SuppressWarnings("Singleton")
 	private enum AppbarCallback implements IAppbarCallback {
-		ABN_FULLSCREENAPP(ShellAPIEx.ABN_FULLSCREENAPP, (ITurboBarPresenter turboBarPresenter, LPARAM lParam) -> {
+		ABN_FULLSCREENAPP((ITurboBarPresenter turboBarPresenter, LPARAM lParam) -> {
 			if (!WindowsEnvironment.isDesktopFocused()) {
 				final boolean fullscreenExited = (1 != lParam.intValue());
 				turboBarPresenter.setTopmost(fullscreenExited);
@@ -250,8 +236,8 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		private final int mAppbarCallbackConstant;
 		private final IAppbarCallback mAppBarCallback;
 
-		AppbarCallback(final int appbarCallbackConstant, final IAppbarCallback appBarCallback) {
-			mAppbarCallbackConstant = appbarCallbackConstant;
+		AppbarCallback(final IAppbarCallback appBarCallback) {
+			mAppbarCallbackConstant = ShellAPIEx.ABN_FULLSCREENAPP;
 			mAppBarCallback = appBarCallback;
 		}
 
@@ -289,12 +275,13 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 
 
 	private void updateDateTime(final CalendarChangePayload payload) {
-		turboBarView.updateDateTime(String.format("%d-%02d-%02d", payload.getYearNum(), payload.getMonthNum(), payload.getDayNum()));
+		turboBarView.updateDateTime(payload.getStringForView());
 	}
 
 	//////////////////////////////////////////////////////////////
 	// View-sourced logic (i.e. user-invoked actions)
 	//////////////////////////////////////////////////////////////
+	@SuppressWarnings("Singleton")
 	enum MainButtonAction implements ViewAction {
 		TURBO_MENU((ITurboBarPresenter presenter, Event event) -> {
 
@@ -312,9 +299,10 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 		}
 	}
 
+	@SuppressWarnings("Singleton")
 	enum SystemAction implements ViewAction {
 		ACTIVATE_LAST_MAXIMIZED((ITurboBarPresenter presenter, Event event) -> {
-			if (((MouseEvent) event).getButton().equals(MouseButton.PRIMARY))
+			if (MouseButton.PRIMARY == ((MouseEvent) event).getButton())
 				WinEventAgent.INSTANCE.activateLastMaximizedWindow();
 			else
 				WinEventAgent.INSTANCE.activateFirstMaximizedWindow();
@@ -357,6 +345,27 @@ public class TurboBarPresenter implements ITurboBarPresenter {
 
 		SysBtnAction(final ViewAction viewAction) {
 			mViewAction = viewAction;
+		}
+
+		/**
+		 * Assumption - (SysBtnCloseAction.CLICK == action) && (MouseButton.PRIMARY != event.getButton()) is false
+		 */
+		public static void performCloseAction(final SysBtnCloseAction action, final ITurboBarPresenter mPresenter, final MouseEvent event) {
+			//noinspection SwitchStatement
+			switch (action) {
+				case CANCEL:
+					break;
+				case CLICK:
+					// we assume the caller already ensured if this
+					CLOSE.invoke(mPresenter, event);
+					break;
+				case PRIMARY_HELD:
+					FORCE_CLOSE.invoke(mPresenter, event);
+					break;
+				case SECONDARY_HELD:
+					KILL.invoke(mPresenter, event);
+					break;
+			}
 		}
 
 		@Override

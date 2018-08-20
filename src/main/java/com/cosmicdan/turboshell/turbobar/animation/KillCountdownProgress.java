@@ -21,12 +21,14 @@ public class KillCountdownProgress extends Transition {
 	private final String mColorHex;
 	private final AnimationDirection mAnimDirection;
 
-	public KillCountdownProgress(final Duration duration, final AdaptiveButton ctrlCloseButton, final String colorHex, final boolean animDirection) {
+	//public KillCountdownProgress(final Duration duration, final AdaptiveButton ctrlCloseButton, final String colorHex, final boolean animDirection) {
+	public KillCountdownProgress(final Duration duration, final AdaptiveButton ctrlCloseButton, final String colorHex, final AnimationDirection animDirection) {
 		setDuration(duration);
 		setCycleDuration(duration);
 		mCtrlCloseButton = ctrlCloseButton;
 		mColorHex = colorHex;
-		mAnimDirection = animDirection ? AnimationDirection.REVERSE : AnimationDirection.NORMAL;
+		//mAnimDirection = animDirection ? AnimationDirection.REVERSE : AnimationDirection.NORMAL;
+		mAnimDirection = animDirection;
 	}
 
 	@Override
@@ -35,7 +37,6 @@ public class KillCountdownProgress extends Transition {
 		mCtrlCloseButton.setStyle(null);
 	}
 
-	@SuppressWarnings({"StringConcatenationMissingWhitespace", "NumericCastThatLosesPrecision"})
 	@Override
 	public final void interpolate(final double frac) {
 		int progressPercent = (int) (frac * 100);
@@ -50,22 +51,20 @@ public class KillCountdownProgress extends Transition {
 
 	private void setDuration(final Duration value) {
 		if ((null != mDuration) || (!DEFAULT_DURATION.equals(value))) {
-			durationProperty().set(value);
+			getDurationProperty().set(value);
 		}
 	}
 
-	private Duration getDuration() {
-		return (null == mDuration)? DEFAULT_DURATION : mDuration.get();
-	}
-
-	@SuppressWarnings({"AnonymousInnerClassWithTooManyMethods", "OverlyComplexAnonymousInnerClass"})
-	private ObjectProperty<Duration> durationProperty() {
+	private ObjectProperty<Duration> getDurationProperty() {
 		if (null == mDuration) {
+			//noinspection AnonymousInnerClassWithTooManyMethods,OverlyComplexAnonymousInnerClass
 			mDuration = new ObjectPropertyBase<Duration>(DEFAULT_DURATION) {
+				private static final String NAME = "duration";
+
 				@Override
 				public void invalidated() {
 					try {
-						setCycleDuration(getDuration());
+						setCycleDuration(DEFAULT_DURATION);
 					} catch (final IllegalArgumentException exception) {
 						if (isBound()) {
 							unbind();
@@ -82,7 +81,7 @@ public class KillCountdownProgress extends Transition {
 
 				@Override
 				public String getName() {
-					return "duration";
+					return NAME;
 				}
 			};
 		}

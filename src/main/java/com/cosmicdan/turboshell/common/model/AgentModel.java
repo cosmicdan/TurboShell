@@ -66,7 +66,6 @@ public abstract class AgentModel implements Runnable {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	public final void registerCallback(final Class<? extends IPayload> payloadClass, final PayloadCallback<? extends IPayload> callback) {
 		if (null == callback)
 			return;
@@ -74,11 +73,11 @@ public abstract class AgentModel implements Runnable {
 		synchronized(callbackLock) {
 			if (null == mCallbacks)
 				mCallbacks = new HashSet<>(1);
+			//noinspection unchecked
 			mCallbacks.add(new CallbackReceiverEntry(payloadClass, callback));
 		}
 	}
 
-	@SuppressWarnings("MethodWithMultipleLoops")
 	protected final void runCallbacks(final IPayload payload) {
 		final Collection<CallbackReceiverEntry<IPayload>> callbacksCopy;
 		// first we copy the relevent payload to a new hashmap since we don't want to run each callback with a thread lock held

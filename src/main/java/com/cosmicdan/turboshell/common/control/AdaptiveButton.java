@@ -17,7 +17,6 @@ public class AdaptiveButton extends Button {
 	protected enum AddTextPadding {LEFT, RIGHT, BOTH}
 	private final ImageView[] mImageViews;
 
-	@SuppressWarnings("ObjectAllocationInLoop")
 	public AdaptiveButton(final Class<?> mSourceClass, final String text, final String[] imageResourcePaths) {
 		super(text);
 		mImageViews = new ImageView[imageResourcePaths.length];

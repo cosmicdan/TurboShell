@@ -16,9 +16,8 @@ public final class CalendarAgent extends AgentModel {
 
 	private volatile boolean shouldRun = true;
 
-	public CalendarAgent() {}
+	private CalendarAgent() {}
 
-	@SuppressWarnings("BusyWait")
 	@Override
 	protected void serviceStart() {
 		log.info("Starting...");
@@ -41,7 +40,6 @@ public final class CalendarAgent extends AgentModel {
 				lastDayNum = currentDayNum;
 				lastMonthNum = currentMonthNum;
 				lastYearNum = currentYearNum;
-				//noinspection ObjectAllocationInLoop
 				INSTANCE.runCallbacks(new CalendarChangePayload(lastDayNum, lastMonthNum, lastYearNum));
 			}
 

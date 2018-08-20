@@ -17,21 +17,43 @@ import com.sun.jna.win32.W32APIOptions;
 import lombok.extern.log4j.Log4j2;
 
 /**
- * Contains User32 methods as a direct mapping instead of JNA's default interface mapping for performance
+ * Contains all our Win32/WinAPI native methods as a direct mapping instead of JNA's default interface mapping, for performance reasons
  */
-@SuppressWarnings({"UnusedReturnValue", "MethodWithTooManyParameters", "BooleanMethodNameMustStartWithQuestion", "NativeMethod",
-		"Singleton"})
+@SuppressWarnings({"NativeMethod", "UnusedReturnValue"})
 @Log4j2
-public final class User32Ex {
-	public static final User32Ex INSTANCE;
+public class User32Ex {
+	protected static final User32Ex USER32;
 
 	static {
-		INSTANCE = new User32Ex();
+		USER32 = new User32Ex();
 		final NativeLibrary user32 = NativeLibrary.getInstance("user32", W32APIOptions.DEFAULT_OPTIONS);
 		Native.register(user32);
 	}
 
-	private User32Ex() {}
+	protected User32Ex() {}
+
+	public interface AgentDelegator {
+		default int handleWindowMessage(final MSG msg) {
+			final int result = USER32.GetMessage(msg, null, 0, 0);
+			if (-1 != result) {
+				USER32.TranslateMessage(msg);
+				USER32.DispatchMessage(msg);
+			}
+			return result;
+		}
+
+		default void setForegroundWindow(final HWND hWnd) {
+			USER32.SetForegroundWindow(hWnd);
+		}
+
+		default void showWindow(final HWND hWnd, final int nCmdShow) {
+			USER32.ShowWindowAsync(hWnd, nCmdShow);
+		}
+	}
+
+	//////////////////////////////////////////////////////////////
+	// USER32
+	//////////////////////////////////////////////////////////////
 
 	// generic window stuff
 	/** See {@link User32#FindWindow} */
@@ -97,4 +119,7 @@ public final class User32Ex {
 	 */
 	public native LRESULT CallWindowProc(Pointer proc, HWND hWnd, int uMsg, WPARAM wParam, LPARAM lParam);
 
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
 }

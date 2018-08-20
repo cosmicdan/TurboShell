@@ -1,7 +1,5 @@
 package com.cosmicdan.turboshell.turbobar;
 
-import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnMinimizeState;
-import com.cosmicdan.turboshell.turbobar.TurboBarView.SysBtnResizeState;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import javafx.event.Event;
 
@@ -9,12 +7,15 @@ import javafx.event.Event;
  * Contract between TurboBar view and presenter
  * @author Daniel 'CosmicDan' Connolly
  */
-@SuppressWarnings({"InterfaceNeverImplemented", "ClassIndependentOfModule"})
+@SuppressWarnings("InterfaceNeverImplemented")
 public interface TurboBarContract {
 	@SuppressWarnings("CyclicClassDependency")
 	interface ITurboBarView {
-		void setPresenter(ITurboBarPresenter presenter);
-		void setup(int xPos, int width, int barHeight, String css, String windowName);
+		enum SysBtnMinimizeState {ENABLED, DISABLED}
+		enum SysBtnResizeState {MAXIMIZE, RESTORE, DISABLED}
+		enum SysBtnCloseAction {CANCEL, CLICK, PRIMARY_HELD, SECONDARY_HELD}
+
+		void setup(ITurboBarPresenter presenter, int xPos, int width, int barHeight, String css, String windowName);
 		void redraw(final int xPos, final int width, final int barHeight);
 		void updateSysBtnMinimize(SysBtnMinimizeState toState);
 		void updateSysBtnResize(SysBtnResizeState toState);
@@ -24,15 +25,23 @@ public interface TurboBarContract {
 
 	@SuppressWarnings("CyclicClassDependency")
 	interface ITurboBarPresenter {
-		//ITurboBarView getTurboBarView();
-
+		/**
+		 * Required for AppBar callback.
+		 * @return The TurboBar HWnd.
+		 */
 		HWND getTurboBarHWnd();
 
 		/**
-		 * Used to set the view to top or bottom of z-order
+		 * Used to toggle topmost property for TurboBar, e.g. when a foreground app enters fullscreen mode.
 		 * @param topmost Whether to set the view as topmost or not.
 		 */
 		void setTopmost(final boolean topmost);
+
+		/**
+		 * Called from the main thread
+		 * @param view The pre-constructed view
+		 */
+		void setup(final ITurboBarView view);
 
 		@FunctionalInterface
 		interface ViewAction {

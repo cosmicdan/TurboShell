@@ -4,7 +4,7 @@ import com.cosmicdan.turboshell.common.model.AgentModel;
 import com.cosmicdan.turboshell.common.model.SizedStack;
 import com.cosmicdan.turboshell.common.model.payload.WindowSysBtnUpdatePayload;
 import com.cosmicdan.turboshell.common.model.payload.WindowTitleChangePayload;
-import com.cosmicdan.turboshell.winapi.User32Ex;
+import com.cosmicdan.turboshell.winapi.User32Ex.AgentDelegator;
 import com.cosmicdan.turboshell.winapi.WinUserEx;
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.User32;
@@ -25,9 +25,8 @@ import lombok.extern.log4j.Log4j2;
  * Presenter. Callbacks are processed in its own thread.
  * @author Daniel 'CosmicDan' Connolly
  */
-@SuppressWarnings({"CyclicClassDependency", "Singleton"})
 @Log4j2
-public final class WinEventAgent extends AgentModel {
+public final class WinEventAgent extends AgentModel implements AgentDelegator {
 	public static final WinEventAgent INSTANCE = new WinEventAgent();
 
 	public enum KillForegroundHardness{SOFT, HARD}
@@ -40,7 +39,6 @@ public final class WinEventAgent extends AgentModel {
 	private HANDLE hookNameChange = null;
 	private HANDLE hookForegroundChange = null;
 
-	@SuppressWarnings("FeatureEnvy")
 	@Override
 	protected void serviceStart() {
 		log.info("Starting...");
@@ -76,6 +74,13 @@ public final class WinEventAgent extends AgentModel {
 		final MSG msg = new MSG();
 		int result = -1;
 		while (0 != result) {
+			result = handleWindowMessage(msg);
+			if (-1 == result) {
+				// TODO: A program-stopping error
+				log.error("Error in GetMessage! This is bad!");
+				break;
+			}
+			/*
 			result = User32Ex.INSTANCE.GetMessage(msg, null, 0, 0);
 			if (-1 == result) {
 				log.error("Error in GetMessage! Aborting!");
@@ -84,6 +89,7 @@ public final class WinEventAgent extends AgentModel {
 				User32Ex.INSTANCE.TranslateMessage(msg);
 				User32Ex.INSTANCE.DispatchMessage(msg);
 			}
+			*/
 		}
 
 	}
@@ -107,6 +113,7 @@ public final class WinEventAgent extends AgentModel {
 	/**
 	 * Shared callback for the window event hooks we're interested in
 	 */
+	@SuppressWarnings("CyclicClassDependency")
 	private static final class WinEventProcCallback implements WinEventProc {
 		private WinEventProcCallback() {}
 
@@ -134,6 +141,7 @@ public final class WinEventAgent extends AgentModel {
 	/**
 	 * WinEventProcCallback (window event hooks) response logic
 	 */
+	@SuppressWarnings("CyclicClassDependency")
 	enum WindowEventResponse implements IWindowEventResponse {
 		EVENT_SYSTEM_FOREGROUND(WinUserEx.EVENT_SYSTEM_FOREGROUND, (WindowInfo newWindowInfo) -> {
 			//log.info("Foreground window changed");
@@ -206,18 +214,18 @@ public final class WinEventAgent extends AgentModel {
 
 	public void activateLastMaximizedWindow() {
 		for (int i = INSTANCE.foregroundWindows.size() - 1; -1 < i; i--) {
-			WindowInfo windowInfo = INSTANCE.foregroundWindows.get(i);
+			final WindowInfo windowInfo = INSTANCE.foregroundWindows.get(i);
 			if (windowInfo.isMaximized()) {
-				User32Ex.INSTANCE.SetForegroundWindow(windowInfo.getHWnd());
+				setForegroundWindow(windowInfo.getHWnd());
 				break;
 			}
 		}
 	}
 
 	public void activateFirstMaximizedWindow() {
-		for (WindowInfo windowInfo : INSTANCE.foregroundWindows) {
+		for (final WindowInfo windowInfo : INSTANCE.foregroundWindows) {
 			if (windowInfo.isMaximized()) {
-				User32Ex.INSTANCE.SetForegroundWindow(windowInfo.getHWnd());
+				setForegroundWindow(windowInfo.getHWnd());
 				break;
 			}
 		}
@@ -229,7 +237,7 @@ public final class WinEventAgent extends AgentModel {
 	public void minimizeForeground() {
 		// TODO: Test that the window is valid (e.g. Discord after minimizing it to tray)
 		if (!foregroundWindows.isEmpty()) {
-			User32Ex.INSTANCE.ShowWindowAsync(foregroundWindows.peek().getHWnd(), WinUser.SW_MINIMIZE);
+			showWindow(foregroundWindows.peek().getHWnd(), WinUser.SW_MINIMIZE);
 		}
 	}
 
@@ -240,8 +248,7 @@ public final class WinEventAgent extends AgentModel {
 		// TODO: Test that the window is valid (e.g. Discord after minimizing it to tray)
 		if (!foregroundWindows.isEmpty()) {
 			final WindowInfo foregroundWindow = foregroundWindows.peek();
-			User32Ex.INSTANCE.ShowWindowAsync(foregroundWindow.getHWnd(),
-					foregroundWindow.isMaximized() ? WinUser.SW_RESTORE : WinUser.SW_MAXIMIZE);
+			showWindow(foregroundWindow.getHWnd(), foregroundWindow.isMaximized() ? WinUser.SW_RESTORE : WinUser.SW_MAXIMIZE);
 		}
 	}
 
