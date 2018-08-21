@@ -133,8 +133,9 @@ Else
 		ConsoleWrite("Updated TurboShell.ini" & @CRLF)
 	EndIf
 	ConsoleWrite("Calling " & @ScriptDir & "\bin\TurboShell.exe..." & @CRLF)
-	RunWait(@ScriptDir & "\bin\TurboShell.exe", @ScriptDir)
-	; TODO: Logging? Kill signal detection?
+	; Logging? Kill signal detection?
+	;RunWait(@ScriptDir & "\bin\TurboShell.exe", @ScriptDir)
+	Run(@ScriptDir & "\bin\TurboShell.exe", @ScriptDir)
 EndIf
 
 ; done. Helper functions below.

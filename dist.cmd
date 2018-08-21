@@ -1,3 +1,3 @@
-gradlew clean
-gradlew dist
+call gradlew clean
+call gradlew dist
 pause
