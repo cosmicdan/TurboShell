@@ -21,13 +21,11 @@ public class KillCountdownProgress extends Transition {
 	private final String mColorHex;
 	private final AnimationDirection mAnimDirection;
 
-	//public KillCountdownProgress(final Duration duration, final AdaptiveButton ctrlCloseButton, final String colorHex, final boolean animDirection) {
 	public KillCountdownProgress(final Duration duration, final AdaptiveButton ctrlCloseButton, final String colorHex, final AnimationDirection animDirection) {
 		setDuration(duration);
 		setCycleDuration(duration);
 		mCtrlCloseButton = ctrlCloseButton;
 		mColorHex = colorHex;
-		//mAnimDirection = animDirection ? AnimationDirection.REVERSE : AnimationDirection.NORMAL;
 		mAnimDirection = animDirection;
 	}
 
