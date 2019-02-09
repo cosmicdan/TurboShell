@@ -1,7 +1,5 @@
 package com.cosmicdan.turboshell.turbobar;
 
-import com.cosmicdan.turboshell.common.model.AgentModel.PayloadCallback;
-import com.cosmicdan.turboshell.common.model.CalendarAgent;
 import com.cosmicdan.turboshell.TurboShellConfig;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView.SysBtnCloseAction;
 import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarView.SysBtnMinimizeState;
@@ -35,12 +33,14 @@ import com.sun.jna.platform.win32.WinDef.UINT_PTR;
 import com.sun.jna.platform.win32.WinDef.WPARAM;
 import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.WinUser.WindowProc;
+import javafx.animation.AnimationTimer;
 import javafx.event.Event;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import lombok.extern.log4j.Log4j2;
 
 import java.net.URL;
+import java.time.LocalDateTime;
 import java.util.EnumSet;
 
 /**
@@ -125,11 +125,8 @@ public class TurboBarPresenter extends User32Ex implements ITurboBarPresenter {
 
 		// setup some models and register for observing
 		WinEventAgent.INSTANCE.addPresenter(initialTopHwnd, this);
-		// OLD STUFF BELOW
-		// Calendar
-		CalendarAgent.INSTANCE.registerCallback(CalendarChangePayload.class,
-				(PayloadCallback<CalendarChangePayload>) this::updateDateTime);
-		CalendarAgent.INSTANCE.start();
+		final AnimationTimer calendarDisplay = new CalendarDisplay();
+		calendarDisplay.start();
 
 		// finally, add a shutdown hook to cleanup
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -349,7 +346,6 @@ public class TurboBarPresenter extends User32Ex implements ITurboBarPresenter {
 				case CANCEL:
 					break;
 				case CLICK:
-					// we assume the caller already ensured if this
 					CLOSE.invoke(mPresenter, event);
 					break;
 				case PRIMARY_HELD:
@@ -364,6 +360,41 @@ public class TurboBarPresenter extends User32Ex implements ITurboBarPresenter {
 		@Override
 		public void invoke(final ITurboBarPresenter presenter, final Event event) {
 			mViewAction.invoke(presenter, event);
+		}
+	}
+
+	@SuppressWarnings("NonStaticInnerClassInSecureContext")
+	private final class CalendarDisplay extends AnimationTimer {
+		private int lastDayNum = -1;
+		private int lastMonthNum = -1;
+		private int lastYearNum = -1;
+
+		private int currentDayNum = -1;
+		private int currentMonthNum = -1;
+		private int currentYearNum = -1;
+
+		private CalendarDisplay() {}
+
+		@Override
+		public void handle(final long now) {
+			final LocalDateTime dateTime = LocalDateTime.now();
+			currentDayNum = dateTime.getDayOfMonth();
+			currentMonthNum = dateTime.getMonthValue();
+			currentYearNum = dateTime.getYear();
+
+			if ((currentDayNum != lastDayNum) || (currentMonthNum != lastMonthNum) || (currentYearNum != lastYearNum)) {
+				updateDateTime(new CalendarChangePayload(currentDayNum, currentMonthNum, currentYearNum));
+				lastDayNum = currentDayNum;
+				lastMonthNum = currentMonthNum;
+				lastYearNum = currentYearNum;
+			}
+		}
+
+		@Override
+		public String toString() {
+			return String.format(
+					"CalendarDisplay{lastDayNum=%d, lastMonthNum=%d, lastYearNum=%d, currentDayNum=%d, currentMonthNum=%d, currentYearNum=%d}",
+					lastDayNum, lastMonthNum, lastYearNum, currentDayNum, currentMonthNum, currentYearNum);
 		}
 	}
 }
