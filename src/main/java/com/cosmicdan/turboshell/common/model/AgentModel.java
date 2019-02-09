@@ -17,13 +17,20 @@ import java.util.Set;
 public abstract class AgentModel implements Runnable {
 	private final Object callbackLock = new Object();
 	private Set<CallbackReceiverEntry<IPayload>> mCallbacks = null;
+	private Thread agentThread = null;
 
 	///////////////////
 	// Thread related things
 	///////////////////
 
+	/**
+	 * Start this agent if required. If it is already running, nothing will happen.
+	 */
 	public final void start() {
-		new Thread(this).start();
+		if (null == agentThread) {
+			agentThread = new Thread(this);
+			agentThread.start();
+		}
 	}
 
 	@Override

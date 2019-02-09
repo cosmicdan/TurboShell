@@ -1,5 +1,7 @@
 package com.cosmicdan.turboshell.turbobar;
 
+import com.cosmicdan.turboshell.common.model.payload.WindowSysBtnUpdatePayload;
+import com.cosmicdan.turboshell.common.model.payload.WindowTitleChangePayload;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import javafx.event.Event;
 
@@ -7,10 +9,9 @@ import javafx.event.Event;
  * Contract between TurboBar view and presenter
  * @author Daniel 'CosmicDan' Connolly
  */
-@SuppressWarnings("InterfaceNeverImplemented")
-public interface TurboBarContract {
+public class TurboBarContract {
 	@SuppressWarnings("CyclicClassDependency")
-	interface ITurboBarView {
+	public interface ITurboBarView {
 		enum SysBtnMinimizeState {ENABLED, DISABLED}
 		enum SysBtnResizeState {MAXIMIZE, RESTORE, DISABLED}
 		enum SysBtnCloseAction {CANCEL, CLICK, PRIMARY_HELD, SECONDARY_HELD}
@@ -24,7 +25,7 @@ public interface TurboBarContract {
 	}
 
 	@SuppressWarnings("CyclicClassDependency")
-	interface ITurboBarPresenter {
+	public interface ITurboBarPresenter {
 		/**
 		 * Required for AppBar callback.
 		 * @return The TurboBar HWnd.
@@ -42,6 +43,10 @@ public interface TurboBarContract {
 		 * @param view The pre-constructed view
 		 */
 		void setup(final ITurboBarView view);
+
+		void updateWindowTitle(WindowTitleChangePayload windowTitleChangePayload);
+
+		void updateSysBtns(WindowSysBtnUpdatePayload windowSysBtnUpdatePayload);
 
 		@FunctionalInterface
 		interface ViewAction {

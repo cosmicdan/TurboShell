@@ -48,7 +48,7 @@ import java.util.EnumSet;
  * view actions and models/agents.
  * @author Daniel 'CosmicDan' Connolly
  */
-@SuppressWarnings("ClassWithTooManyDependencies")
+@SuppressWarnings({"ClassWithTooManyDependencies", "CyclicClassDependency"})
 @Log4j2
 public class TurboBarPresenter extends User32Ex implements ITurboBarPresenter {
 	private static final String WINDOW_NAME = "TurboShell's TurboBar";
@@ -124,15 +124,8 @@ public class TurboBarPresenter extends User32Ex implements ITurboBarPresenter {
 		appBarData = setupAppbar(workAreaXAndWidth, turboBarHeight);
 
 		// setup some models and register for observing
-		// TODO: refactor this (feature envy). Don't forget to remove the SuppressWarnings annotation too.
-		WinEventAgent.INSTANCE.setInitialTopHwnd(initialTopHwnd);
-		// window title changes
-		WinEventAgent.INSTANCE.registerCallback(WindowTitleChangePayload.class,
-				(PayloadCallback<WindowTitleChangePayload>) this::updateWindowTitle);
-		// window sysbtn control updates
-		WinEventAgent.INSTANCE.registerCallback(WindowSysBtnUpdatePayload.class,
-				(PayloadCallback<WindowSysBtnUpdatePayload>) this::updateSysBtns);
-		WinEventAgent.INSTANCE.start();
+		WinEventAgent.INSTANCE.addPresenter(initialTopHwnd, this);
+		// OLD STUFF BELOW
 		// Calendar
 		CalendarAgent.INSTANCE.registerCallback(CalendarChangePayload.class,
 				(PayloadCallback<CalendarChangePayload>) this::updateDateTime);
@@ -257,12 +250,12 @@ public class TurboBarPresenter extends User32Ex implements ITurboBarPresenter {
 	// Model/agent-sourced or locally-sourced logic (e.g. reactions to environment changes)
 	//////////////////////////////////////////////////////////////
 
-	private void updateWindowTitle(final WindowTitleChangePayload payload) {
-		turboBarView.updateWindowTitle(payload.getWindowTitle());
+	public void updateWindowTitle(final WindowTitleChangePayload windowTitleChangePayload) {
+		turboBarView.updateWindowTitle(windowTitleChangePayload.getWindowTitle());
 	}
 
-	private void updateSysBtns(final WindowSysBtnUpdatePayload payload) {
-		final EnumSet<Flag> currentWindowFlags = payload.getFlags();
+	public void updateSysBtns(final WindowSysBtnUpdatePayload windowSysBtnUpdatePayload) {
+		final EnumSet<Flag> currentWindowFlags = windowSysBtnUpdatePayload.getFlags();
 		// check if window can be resized
 		SysBtnResizeState newState = SysBtnResizeState.DISABLED;
 		if (currentWindowFlags.contains(Flag.IS_MAXIMIZABLE)) {

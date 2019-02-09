@@ -4,6 +4,7 @@ import com.cosmicdan.turboshell.common.model.AgentModel;
 import com.cosmicdan.turboshell.common.model.SizedStack;
 import com.cosmicdan.turboshell.common.model.payload.WindowSysBtnUpdatePayload;
 import com.cosmicdan.turboshell.common.model.payload.WindowTitleChangePayload;
+import com.cosmicdan.turboshell.turbobar.TurboBarContract.ITurboBarPresenter;
 import com.cosmicdan.turboshell.winapi.User32Ex.AgentDelegator;
 import com.cosmicdan.turboshell.winapi.WinUserEx;
 import com.sun.jna.platform.win32.Kernel32;
@@ -17,12 +18,11 @@ import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.WinUser.MSG;
 import com.sun.jna.platform.win32.WinUser.WinEventProc;
 import com.sun.jna.ptr.IntByReference;
-import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
 /**
  * Agent model for hooking and responding to WinEvents on the system, and also initiates windows-related events triggered by a
- * Presenter. Callbacks are processed in its own thread.
+ * Presenter. Callbacks are processed in their own thread.
  * @author Daniel 'CosmicDan' Connolly
  */
 @Log4j2
@@ -32,12 +32,22 @@ public final class WinEventAgent extends AgentModel implements AgentDelegator {
 	public enum KillForegroundHardness{SOFT, HARD}
 
 	private final SizedStack<WindowInfo> foregroundWindows = new SizedStack<>(10);
-	@Setter	private HWND mInitialTopHwnd;
+	private HWND mInitialTopHwnd;
 
 	// all callbacks as class fields to avoid GC
 	private HANDLE hookLocationChange = null;
 	private HANDLE hookNameChange = null;
 	private HANDLE hookForegroundChange = null;
+
+	public void addPresenter(final HWND initialTopHwnd, final ITurboBarPresenter turboBarPresenter) {
+		mInitialTopHwnd = initialTopHwnd;
+		// register for window title changes
+		registerCallback(WindowTitleChangePayload.class, (PayloadCallback<WindowTitleChangePayload>) turboBarPresenter::updateWindowTitle);
+		// register for window sysbtn control updates
+		registerCallback(WindowSysBtnUpdatePayload.class, (PayloadCallback<WindowSysBtnUpdatePayload>) turboBarPresenter::updateSysBtns);
+		// always call start - the agent itself will only (re)start if necessary
+		start();
+	}
 
 	@Override
 	protected void serviceStart() {
